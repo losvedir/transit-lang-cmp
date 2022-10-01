@@ -1,0 +1,6 @@
+{
+  "https://deno.land/std@0.158.0/_util/assert.ts": "e94f2eb37cebd7f199952e242c77654e43333c1ac4c5c700e929ea3aa5489f74",
+  "https://deno.land/std@0.158.0/encoding/csv.ts": "0715a643b2a8111c919fe7584bad78f776c28ca9301e64eace3cfe4f1a0c6045",
+  "https://deno.land/std@0.158.0/encoding/csv/_io.ts": "91a61ee8ec8151126479453c71b7cb789fbb2bd224052360e39a79f81df1f3dc",
+  "https://deno.land/std@0.158.0/encoding/csv/_parser.ts": "8deb087b8f068a331b4081885ac4feef0f340deb65b6e1ab3fa83871fb3ada5f"
+}

@@ -1,0 +1,7 @@
+MBTA_GTFS*
+.vscode
+trexit/.elixir_ls
+trexit/_build
+trexit/deps
+trogsit/app
+trustit/target
