@@ -54,6 +54,7 @@ structured `StopTime` structs.
 | Elixir   | 4,116     |
 | Go       | 817       |
 | Rust     | 431       |
+| SQLite   | ~ 4,000   |
 
 ### Scanning the data
 
@@ -67,6 +68,7 @@ belong to those trips.
 | Elixir   | 59        |
 | Go       | 35        |
 | Rust     | 17        |
+| SQLite   | 425       |
 
 ## Thoughts
 
@@ -157,3 +159,27 @@ I also was impressed and amused that I got compiler warnings that my Struct had
 unnecessary fields (I haven't used the Trips' service_ids or the StopTimes'
 arrival and departure times yet), which wasn't raised for any of the other
 languages.
+
+### SQLite
+
+Not really an apples-to-apples comparison but I was curious about the order of
+magnitude performance characteristics of SQLite here.
+
+For importing `stop_times` I counted (yes, so take that time with a grain of
+salt) while running:
+
+```
+sqlite> .mode csv
+sqlite> .import MBTA_GTFS/stop_times.txt stop_times
+```
+
+And for scanning the data for the number of Red line schedules, I did:
+
+```
+sqlite> .timer on
+sqlite> select count(*) from stop_times where trip_id in (select trip_id from trips where route_id = "Red");
+```
+
+Can't beat the convenience! It's an order of magnitude slower than the apps
+which keep everything in memory, but with indexes it would be faster, and it
+would result in an app that takes less memory.
