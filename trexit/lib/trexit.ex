@@ -8,14 +8,19 @@ end
 
 defmodule Trexit do
   def main(route) do
-    {time, stop_times} =
+    :ets.new(:stop_times, [:named_table, {:read_concurrency, true}])
+    :ets.new(:ix_stop_times_by_trip, [:named_table, {:read_concurrency, true}])
+    :ets.new(:trips, [:named_table, {:read_concurrency, true}])
+    :ets.new(:ix_trips_by_route, [:named_table, {:read_concurrency, true}])
+
+    {time, _} =
       :timer.tc(fn ->
         get_stop_times()
       end)
 
     IO.puts("Parsed stop_times.txt in #{time / 1000} ms")
 
-    {time, trips} =
+    {time, _} =
       :timer.tc(fn ->
         get_trips()
       end)
@@ -24,14 +29,19 @@ defmodule Trexit do
 
     {time, schedule_count} =
       :timer.tc(fn ->
-        route_trips =
-          Enum.reduce(trips, MapSet.new(), fn t, acc ->
-            if t.route_id == route, do: MapSet.put(acc, t.trip_id), else: acc
-          end)
+        case :ets.lookup(:ix_trips_by_route, route) do
+          [{^route, trip_ixs}] ->
+            Enum.reduce(trip_ixs, 0, fn trip_ix, acc ->
+              [{^trip_ix, %Trip{trip_id: trip_id, route_id: ^route}}] =
+                :ets.lookup(:trips, trip_ix)
 
-        Enum.reduce(stop_times, 0, fn st, acc ->
-          if st.trip_id in route_trips, do: acc + 1, else: acc
-        end)
+              [{^trip_id, sts}] = :ets.lookup(:ix_stop_times_by_trip, trip_id)
+              acc + length(sts)
+            end)
+
+          _ ->
+            0
+        end
       end)
 
     IO.puts("Found #{schedule_count} schedules for #{route} in #{time / 1000} ms")
@@ -46,13 +56,22 @@ defmodule Trexit do
     # assert column order
     ["trip_id", "arrival_time", "departure_time", "stop_id" | _] = header
 
-    Enum.map(rest, fn [trip_id, arrival_time, departure_time, stop_id | _] ->
-      %StopTime{
-        trip_id: trip_id,
-        stop_id: stop_id,
-        arrival: arrival_time,
-        departure: departure_time
-      }
+    Enum.with_index(rest, fn [trip_id, arrival_time, departure_time, stop_id | _], i ->
+      case :ets.lookup(:ix_stop_times_by_trip, trip_id) do
+        [] -> :ets.insert(:ix_stop_times_by_trip, {trip_id, [i]})
+        [{_, sts}] -> :ets.insert(:ix_stop_times_by_trip, {trip_id, [i | sts]})
+      end
+
+      :ets.insert(
+        :stop_times,
+        {i,
+         %StopTime{
+           trip_id: trip_id,
+           stop_id: stop_id,
+           arrival: arrival_time,
+           departure: departure_time
+         }}
+      )
     end)
   end
 
@@ -65,12 +84,21 @@ defmodule Trexit do
     # assert column order
     ["route_id", "service_id", "trip_id" | _] = header
 
-    Enum.map(rest, fn [route_id, service_id, trip_id | _] ->
-      %Trip{
-        trip_id: trip_id,
-        route_id: route_id,
-        service_id: service_id
-      }
+    Enum.with_index(rest, fn [route_id, service_id, trip_id | _], i ->
+      case :ets.lookup(:ix_trips_by_route, route_id) do
+        [] -> :ets.insert(:ix_trips_by_route, {route_id, [i]})
+        [{_, trips}] -> :ets.insert(:ix_trips_by_route, {route_id, [i | trips]})
+      end
+
+      :ets.insert(
+        :trips,
+        {i,
+         %Trip{
+           trip_id: trip_id,
+           route_id: route_id,
+           service_id: service_id
+         }}
+      )
     end)
   end
 end

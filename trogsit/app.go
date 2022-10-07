@@ -23,30 +23,30 @@ type Trip struct {
 func main() {
 	route := os.Args[1]
 
-	stopTimes := getStopTimes()
-	trips := getTrips()
+	_, stsByTrip := getStopTimes()
+	trips, tripsByRoute := getTrips()
 
 	t1 := time.Now()
-	routeTrips := map[string]bool{}
-	for _, t := range trips {
-		if t.RouteID == route {
-			routeTrips[t.TripID] = true
+
+	scheduleCount := 0
+
+	ts, ok := tripsByRoute[route]
+	if ok {
+		for _, t_ix := range ts {
+			trip := trips[t_ix]
+			sts, ok := stsByTrip[trip.TripID]
+			if ok {
+				scheduleCount += len(sts)
+			}
 		}
 	}
 
-	stopCount := 0
-	for _, st := range stopTimes {
-		_, relevantTrip := routeTrips[st.TripID]
-		if relevantTrip {
-			stopCount += 1
-		}
-	}
 	t2 := time.Now()
 
-	fmt.Println("Identified", stopCount, "stops in", t2.Sub(t1), "ms")
+	fmt.Println("Identified", scheduleCount, "stops in", t2.Sub(t1))
 }
 
-func getStopTimes() []StopTime {
+func getStopTimes() ([]StopTime, map[string][]int) {
 	f, err := os.Open("../MBTA_GTFS/stop_times.txt")
 	if err != nil {
 		panic(err)
@@ -69,18 +69,26 @@ func getStopTimes() []StopTime {
 	}
 
 	stopTimes := make([]StopTime, 0, 1_000_000)
-	for _, rec := range records[1:] {
-		stopTimes = append(stopTimes, StopTime{TripID: rec[0], StopID: rec[3], Arrival: rec[1], Departure: rec[2]})
+	stsByTrip := make(map[string][]int)
+	for i, rec := range records[1:] {
+		trip := rec[0]
+		sts, ok := stsByTrip[trip]
+		if ok {
+			stsByTrip[trip] = append(sts, i)
+		} else {
+			stsByTrip[trip] = []int{i}
+		}
+		stopTimes = append(stopTimes, StopTime{TripID: trip, StopID: rec[3], Arrival: rec[1], Departure: rec[2]})
 	}
 	end := time.Now()
 	elapsed := end.Sub(start)
 
-	fmt.Println("parsed", len(stopTimes), "stop times in", elapsed, "ms")
+	fmt.Println("parsed", len(stopTimes), "stop times in", elapsed)
 
-	return stopTimes
+	return stopTimes, stsByTrip
 }
 
-func getTrips() []Trip {
+func getTrips() ([]Trip, map[string][]int) {
 	f, err := os.Open("../MBTA_GTFS/trips.txt")
 	if err != nil {
 		panic(err)
@@ -103,13 +111,21 @@ func getTrips() []Trip {
 	}
 
 	trips := make([]Trip, 0, 70_000)
-	for _, rec := range records[1:] {
-		trips = append(trips, Trip{TripID: rec[2], RouteID: rec[0], ServiceID: rec[1]})
+	tripsByRoute := make(map[string][]int)
+	for i, rec := range records[1:] {
+		route := rec[0]
+		ts, ok := tripsByRoute[route]
+		if ok {
+			tripsByRoute[route] = append(ts, i)
+		} else {
+			tripsByRoute[route] = []int{i}
+		}
+		trips = append(trips, Trip{TripID: rec[2], RouteID: route, ServiceID: rec[1]})
 	}
 	end := time.Now()
 	elapsed := end.Sub(start)
 
-	fmt.Println("parsed", len(trips), "trips in", elapsed, "ms")
+	fmt.Println("parsed", len(trips), "trips in", elapsed)
 
-	return trips
+	return trips, tripsByRoute
 }

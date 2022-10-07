@@ -46,29 +46,29 @@ is the median of 5 runs for each app.
 
 This is the time it takes for the app to load the stop_times.txt file, which is
 roughly 100MB and 2M records and parse it into a big vector/list/array of a
-structured `StopTime` structs.
+structured `StopTime` structs, together with an "index" on trips, which is a map
+from the trip ID to a list of indices into the big stop time list.
 
 | Language | Time (ms) |
 | -------- | --------- |
-| Deno     | 2,779     |
-| Elixir   | 4,116     |
-| Go       | 817       |
-| Rust     | 431       |
+| Deno     | 2,905     |
+| Elixir   | 5,986     |
+| Go       | 842       |
+| Rust     | 565       |
 | SQLite   | ~ 4,000   |
 
-### Scanning the data
+### Searching the data
 
-This is the time it takes to scan through the in-memory list of Trips for all
-those that belong to route_id Red, and then count up all the StopTimes that
-belong to those trips.
+This is the time it takes to count the number of StopTimes for a certain route
+(which involves a "join" through trips).
 
 | Language | Time (ms) |
 | -------- | --------- |
-| Deno     | 61        |
-| Elixir   | 59        |
-| Go       | 35        |
-| Rust     | 17        |
-| SQLite   | 425       |
+| Deno     | 1.4       |
+| Elixir   | 3.2       |
+| Go       | 0.4       |
+| Rust     | 0.7       |
+| SQLite   | 13        |
 
 ## Thoughts
 
@@ -105,9 +105,28 @@ to see what I could be missing. I like Elixir the language and all its nice OTP
 goodies, but it's known to be a little slow, so I was wondering how much
 performance I'm leaving on the table.
 
+Thinking ahead a bit to how I want to extend this project to provide a
+concurrent webserver, I figured I'd need to store the data in ETS so I could
+allow concurrent reads. Otherwise, simple lists/maps in a GenServer will be
+serialized to incoming messages from the different requests.
+
+ETS stores data as a (in this case) set of Erlang tuples, and wanting to follow
+the conventions of the other apps, I decided to add an extra "primary key"
+integer to each tuple, for the purpose of the "indexes". The other languages
+allow you to simply index into the underlying list, but that's not really
+possible with the way ETS stores data.
+
+This approach works fine for GTFS static data which is loaded on app start-up,
+but I'm not entirely sure yet how I will handle when I need to _update_ data, if
+I extend the apps to poll the real-time vehicle positions and predictions data.
+
 ### Go
 
 I was super happy to get the work done so far using just the standard library.
+And the performance blew me away! In this iteration (commit) it actually beats
+Rust somehow. In my last commit, which didn't have these "index" data structures
+and just blazed through a giant array of data, it was still fast, but slightly
+slower than rust.
 
 That said, contrary to my expectations, I found the documentation not great.
 While the language reference and tour was pretty good and useful (I kept
@@ -140,16 +159,17 @@ overall.
 
 ### Rust
 
-This one blew me away. I was expecting a lot more low level fiddlyness, but was
-prepared to allocate and clone and do all the tricks I've read about to not
-worry about eking out the most performance possible. After all, I'm comparing
-against higher level interpreted or GC languages, and am interested in Rust more
-for its type system than needing to program at a system level.
+This one shocked me in a good way! I was expecting a lot more low level
+fiddlyness, but was prepared to allocate and clone and do all the tricks I've
+read about to not worry about eking out the most performance possible. After
+all, I'm comparing against higher level interpreted or GC languages, and am
+interested in Rust more for its type system than needing to program at a system
+level.
 
-All that said, the performance ended up better than all the others, even with
-ample String cloning, and was just as easy to do! That said, I've had some
-experience playing with Rust in the past, so it wasn't brand new to me, but it
-has been some time so I was expecting too be a lot more, uh... rusty.
+All that said, the performance ended up quite respectable, even with ample
+String cloning, and was just as easy to do! That said, I've had some experience
+playing with Rust in the past, so it wasn't brand new to me, but it has been
+some time so I was expecting too be a lot more, uh... rusty.
 
 Also, I don't know how much of this is because Rust is special or because
 BurntSushi is a national treasure and his CSV library is impeccably constructed
@@ -176,10 +196,14 @@ sqlite> .import MBTA_GTFS/stop_times.txt stop_times
 And for scanning the data for the number of Red line schedules, I did:
 
 ```
+sqlite> create index stop_times_by_trip on stop_times(trip_id);
+sqlite> create index trips_by_route on trips(route_id);
 sqlite> .timer on
 sqlite> select count(*) from stop_times where trip_id in (select trip_id from trips where route_id = "Red");
 ```
 
 Can't beat the convenience! It's an order of magnitude slower than the apps
-which keep everything in memory, but with indexes it would be faster, and it
-would result in an app that takes less memory.
+which keep everything in memory, but of course the tradeoff then is it uses much
+less memory! And while a given read is slow(-ish), I understand that a lot of it
+is waiting on the filesystem, and that concurrent reads should allow plenty of
+throughput.
