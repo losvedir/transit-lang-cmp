@@ -18,29 +18,23 @@ commands can be run in the repo's root directory:
 The apps are all named some mashup of "Transit" and the programming language
 name.
 
-For now, the apps only read in the GTFS trips (~75k) and stop_times (~2M) data.
-They parse the files, which are `.txt` but CSV, into an in-memory list of
-structs. I was interested to see how long this takes, as it's a bunch of IO -
-there are roughly 75k trips and 2 million stop_times in the MBTA data. In a
-future iteration, I'd also like to handle "services", which specify which trips
-run on which days, and some sort of index structure for more efficiently working
-with these lists. I'm also curious to see how SoA affects performance over the
-current AoS approach.
+For now, the apps only read in the GTFS trips and stop_times data. They parse
+the files, which are `.txt` but CSV, into an in-memory list of structs. I was
+interested to see how long this takes, as it's a bunch of IO - there are roughly
+75k trips and 2 million stop_times in the MBTA data. In a future iteration, I'd
+also like to handle "services", which specify which trips run on which days.
 
-The apps currently allow a user to specify a route, which they then use to scan
-through (1) the trips to see which trips are on that route, and then (2) the
-stop times to see which scheduled stops are on those trips. This churns through
-a bunch of structured data and I use a set for part 1. Eventually I'd like to
-specify the _date_ as well, to identify which services are active, to further
-narrow down the trips, and to return JSON of the schedules, rather than a simple
-count.
+The apps set up a simple webserver that responds to `/schedules/:route`
+requests, and returns a JSON response of all the StopTimes for that route. This
+involves a "join" through trips, and for some routes serializes a bunch of data.
+(The most, I think, is for the Red line at about 7MB of a response.)
 
 ## Data
 
-Here are the runtimes I'm seeing so far. I've instrumented the apps to measure
-two aspects: how long it takes to process the data into its internal structure,
-and how long it takes to scan through the data to return an answer. Listed here
-is the median of 5 runs for each app.
+Currently, I'm collecting two things. The first is how long it takes the apps to
+load the GTFS `stop_times.txt` file into an in-memory structure (together with a
+hashmap "index" to access it more efficiently). The second is the requests per
+second that the webservers can field, as measured using the k6 tool.
 
 ### Loading stop_times.txt
 
@@ -57,10 +51,39 @@ from the trip ID to a list of indices into the big stop time list.
 | Rust     | 565       |
 | SQLite   | ~ 4,000   |
 
+### Webserver performance
+
+This is tested using the [k6](https://github.com/grafana/k6) tool, which I
+installed via homebrew. There is a `loadTest.js` script in the root of the repo,
+and I ran the test as follows:
+
+```
+k6 run -u 50 --duration 30s loadTest.js
+```
+
+That sets up 50 "virtual users" concurrently accessing the server, and the test
+itself has them sequentially issuing requests, of the schedules for roughly a
+hundred routes, some pretty hefty, some pretty small, in random order.
+
+I'm not trying for a perfectly uniform test environment, but I close most of my
+usual apps and just run it on my laptop by itself. You shouldn't _really_ test
+on the same machine, but the requests are decently beefy overall that I figured
+the load from the test harness wouldn't disrupt the response data too badly.
+Here I report the requests/sec that k6 spits out, and also an eyeball at the
+highest RAM and CPU usage I see in ActivityMonitor just out of curiosity.
+
+| Language | Requests/sec | Max CPU (%) | Max RAM (MB) |
+| -------- | ------------ | ----------- | ------------ |
+| Deno     | 286          | 280         | 400          |
+| Elixir   | 82           | 670         | 2,700        |
+| Go       | 1,994        | 620         | 1,100        |
+| Rust     | 1,640        | 600         | 470          |
+
 ### Searching the data
 
-This is the time it takes to count the number of StopTimes for a certain route
-(which involves a "join" through trips).
+This metric I collected from a previous commit, and involved simply counting the
+number of StopTimes for the Red line. I removed this code in favor of the
+webserver approach, but am keeping the stats here for posterity.
 
 | Language | Time (ms) |
 | -------- | --------- |
@@ -105,12 +128,12 @@ to see what I could be missing. I like Elixir the language and all its nice OTP
 goodies, but it's known to be a little slow, so I was wondering how much
 performance I'm leaving on the table.
 
-Thinking ahead a bit to how I want to extend this project to provide a
-concurrent webserver, I figured I'd need to store the data in ETS so I could
-allow concurrent reads. Otherwise, simple lists/maps in a GenServer will be
-serialized to incoming messages from the different requests.
+Normally, my first thought for some state in Elixir would be an Agent or custom
+GenServer, but that would funnel all requests to the one data source, which
+would respond sequentially, and I thought under load that could be a bottleneck.
+So I opted to put the data in ETS, with read concurrency enabled.
 
-ETS stores data as a (in this case) set of Erlang tuples, and wanting to follow
+ETS stores data as a set (in this case) of Erlang tuples, and wanting to follow
 the conventions of the other apps, I decided to add an extra "primary key"
 integer to each tuple, for the purpose of the "indexes". The other languages
 allow you to simply index into the underlying list, but that's not really
@@ -119,14 +142,20 @@ possible with the way ETS stores data.
 This approach works fine for GTFS static data which is loaded on app start-up,
 but I'm not entirely sure yet how I will handle when I need to _update_ data, if
 I extend the apps to poll the real-time vehicle positions and predictions data.
+In that scenario, I've had issues before with how to handle locking and atomic
+updates to ETS data. Most likely it would be something like create a whole new
+ETS table in the background and then swap it out for this one after it's ready.
+
+I used Phoenix here since that's pretty much the standard in Elixir, though it
+might be a bit heavier weight than the other apps. But my understanding is that
+it's mostly just plugs that get compiled in, so it's pretty lightweight in how
+much it actually affects performance vs the minimal possible thing I could do.
 
 ### Go
 
 I was super happy to get the work done so far using just the standard library.
 And the performance blew me away! In this iteration (commit) it actually beats
-Rust somehow. In my last commit, which didn't have these "index" data structures
-and just blazed through a giant array of data, it was still fast, but slightly
-slower than rust.
+Rust somehow.
 
 That said, contrary to my expectations, I found the documentation not great.
 While the language reference and tour was pretty good and useful (I kept
@@ -157,17 +186,23 @@ solid and the build/run cycle was fast! The final result ended up being pretty
 quick, too. It doesn't have the type richness I appreciate, but I didn't mind it
 overall.
 
+I started out looking for a "web framework" since that was my expectation of how
+this works, but it seemed like there was a reasonable consensus that using
+simply the standard library was a good place to start. That was nice, and helped
+me avoid the analysis paralysis and reviewing benchmarks and HN and reddit, etc,
+to decide _which_ framework to use.
+
 ### Rust
 
 This one shocked me in a good way! I was expecting a lot more low level
-fiddlyness, but was prepared to allocate and clone and do all the tricks I've
-read about to not worry about eking out the most performance possible. After
-all, I'm comparing against higher level interpreted or GC languages, and am
-interested in Rust more for its type system than needing to program at a system
-level.
+fiddlyness, but was prepared to simply allocate and clone and do all the tricks
+I've read about to not worry about eking out the most performance possible.
+After all, I'm comparing against higher level interpreted or GC languages, and
+am interested in Rust more for its type system than needing to program at a
+system level.
 
 All that said, the performance ended up quite respectable, even with ample
-String cloning, and was just as easy to do! That said, I've had some experience
+String cloning, and was just as easy to do! To be fair, I've had some experience
 playing with Rust in the past, so it wasn't brand new to me, but it has been
 some time so I was expecting too be a lot more, uh... rusty.
 
@@ -179,6 +214,37 @@ I also was impressed and amused that I got compiler warnings that my Struct had
 unnecessary fields (I haven't used the Trips' service_ids or the StopTimes'
 arrival and departure times yet), which wasn't raised for any of the other
 languages.
+
+For the web server piece, I spent some time trying to decide which framework to
+use. When I last looked at Rust, `rocket` was all the rage, but it seems to have
+fallen off the radar almost completely these days! That was mildly concerning.
+It seems like `actix` has taken over as nearly the "default", except there's a
+new-ish one called `axum` that's quite popular. Being a part of the official
+tokio project, and guessing that tokio has staying power, I went with `axum`.
+
+It was a little tricky to get working... I felt like I was playing type tetris a
+bit to get my app to compile, and was trying to mindlessly copy documentation
+without fully understanding it. I've never quite understood the `#[...]` syntax,
+and so annotating my `main` function with `#[tokio::main]` is still black magic
+to me. I also got tripped up for a while before realizing that I needed to put
+`futures` as a dependency in my `Cargo.toml`. That wasn't in the axum docs but I
+found it in their examples, though it was quite a wild guess that _that_ was the
+thing that allowed the example to compile when mine wasn't. I drew on some
+latent knowledge I had buried deep down in there that `futures` was what the
+`async` ecosystem was built on, and it was a crate rather than part of the
+language, but I had thought it was just a temporary thing for experimentation by
+the rust folks back in the day.
+
+I also ran into some issues trying to get my shared state to work. My handler
+was failing to typecheck and the compiler error was not helpful. The axum docs
+actually mention this is a problem and that there's an `axum-macros` crate that
+can help, though. Some of this was my lack of understanding exactly how `Arc`
+works and how to safely have shared state across async requests. In the end, I
+appreciate that the flexibility is there; right now I just have an `Arc` so that
+all my handlers can read the data I prepare up front, but I could see how I
+could wrap it in an `RwLock`, for example, to also allow safe updates in the
+future. In general, I'm not sure how I feel about Axum's magical
+handler/extractor setup, as I still don't really know how it works.
 
 ### SQLite
 

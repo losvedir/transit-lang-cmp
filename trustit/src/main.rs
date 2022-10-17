@@ -1,6 +1,11 @@
+extern crate tokio;
+
+use axum::Json;
+use axum::{extract::Path, extract::State, response::IntoResponse, routing::get, Router};
 use csv;
+use serde::Serialize;
 use std::collections::HashMap;
-use std::env;
+use std::sync::Arc;
 use std::time::Instant;
 
 // parsing the fields for future use and for fair comparison with
@@ -14,36 +19,86 @@ struct StopTime {
     departure: String,
 }
 
-#[allow(dead_code)]
 struct Trip {
     trip_id: String,
     route_id: String,
     service_id: String,
 }
 
-fn main() {
-    let route = env::args().nth(1).expect("route as argument");
-    println!("Finding schedules for {:?}", route);
-    let (_stop_times, stop_time_by_trip) = get_stop_times();
-    let (trips, trip_by_route) = get_trips();
+#[derive(Debug, Serialize)]
+struct TripResponse {
+    trip_id: String,
+    service_id: String,
+    route_id: String,
+    schedules: Vec<ScheduleResponse>,
+}
 
-    let search_start = Instant::now();
+#[derive(Debug, Serialize)]
+struct ScheduleResponse {
+    stop_id: String,
+    arrival_time: String,
+    departure_time: String,
+}
 
-    let mut schedule_count = 0;
-    if let Some(trip_ixs) = trip_by_route.get(&route) {
-        for trip_id in trip_ixs {
-            let t: &Trip = trips.get(*trip_id).expect("trip from trip index");
-            schedule_count += stop_time_by_trip.get(&t.trip_id).map_or(0, |sts| sts.len());
+struct Data {
+    trips: Vec<Trip>,
+    trips_ix_by_route: HashMap<String, Vec<usize>>,
+    stop_times: Vec<StopTime>,
+    stop_times_ix_by_trip: HashMap<String, Vec<usize>>,
+}
+
+#[tokio::main]
+async fn main() {
+    let (stop_times, stop_times_ix_by_trip) = get_stop_times();
+    let (trips, trips_ix_by_route) = get_trips();
+    let data = Data {
+        trips: trips,
+        trips_ix_by_route: trips_ix_by_route,
+        stop_times: stop_times,
+        stop_times_ix_by_trip: stop_times_ix_by_trip,
+    };
+
+    let app =
+        Router::with_state(Arc::new(data)).route("/schedules/:route_id", get(schedule_handler));
+
+    // run it with hyper on localhost:3000
+    axum::Server::bind(&"0.0.0.0:4000".parse().unwrap())
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+async fn schedule_handler(
+    Path(route_id): Path<String>,
+    State(data): State<Arc<Data>>,
+) -> impl IntoResponse {
+    let mut resp: Vec<TripResponse> = Vec::new();
+
+    if let Some(trip_ixs) = data.trips_ix_by_route.get(&route_id) {
+        for trip_ix in trip_ixs {
+            let trip = &data.trips[*trip_ix];
+            let mut schedules: Vec<ScheduleResponse> = Vec::new();
+            if let Some(stop_time_ixs) = data.stop_times_ix_by_trip.get(&trip.trip_id) {
+                for stop_time_ix in stop_time_ixs {
+                    let stop_time = &data.stop_times[*stop_time_ix];
+                    schedules.push(ScheduleResponse {
+                        stop_id: stop_time.stop_id.clone(),
+                        arrival_time: stop_time.arrival.clone(),
+                        departure_time: stop_time.departure.clone(),
+                    });
+                }
+            }
+            resp.push(TripResponse {
+                trip_id: trip.trip_id.clone(),
+                service_id: trip.service_id.clone(),
+                route_id: trip.route_id.clone(),
+                schedules: schedules,
+            })
         }
+        Json(resp)
+    } else {
+        Json(resp)
     }
-
-    let search_elapsed = search_start.elapsed();
-    println!(
-        "Found {:?} schedules for {:?} in {:?}µs",
-        schedule_count,
-        route,
-        search_elapsed.as_micros()
-    );
 }
 
 fn get_stop_times() -> (Vec<StopTime>, HashMap<String, Vec<usize>>) {

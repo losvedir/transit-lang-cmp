@@ -1,5 +1,8 @@
 import { csv } from "./deps.ts";
+import { server } from "./deps.ts";
+
 const { parse } = csv;
+const { serve } = server;
 
 interface StopTime {
   tripID: string;
@@ -90,43 +93,54 @@ const get_trips = (): [Trip[], { [routeID: string]: number[] }] => {
 const p = self.performance;
 
 p.mark("startStopTimes");
-const [stopTimes, stsByTrip] = get_stop_times();
+const [stopTimes, stopTimesIxByTrip] = get_stop_times();
 p.mark("endStopTimes");
 p.measure("stopTimes", "startStopTimes", "endStopTimes");
-
-p.mark("startTrips");
-const [trips, tripsByRoute] = get_trips();
-p.mark("endTrips");
-p.measure("trips", "startTrips", "endTrips");
-
-const route = Deno.args[0];
-console.log(`Searching stops for route: ${route}`);
-
-p.mark("startSearchStopTimes");
-
-let schedCount = 0;
-if (tripsByRoute[route]) {
-  tripsByRoute[route].forEach((t_ix) => {
-    const trip = trips[t_ix] as Trip;
-    if (stsByTrip[trip.tripID]) {
-      schedCount += stsByTrip[trip.tripID].length;
-    }
-  });
-}
-
-p.mark("endSearchStopTimes");
-p.measure("searchStopTimes", "startSearchStopTimes", "endSearchStopTimes");
-
-console.log(`Found ${schedCount} schedules for ${route}`);
-
 console.log(
   "parse stop times: ",
   p.getEntriesByName("stopTimes")[0].duration,
   "ms",
 );
 
-console.log(
-  "search stop times: ",
-  p.getEntriesByName("searchStopTimes")[0].duration,
-  "ms",
-);
+const [trips, tripsIxByRoute] = get_trips();
+
+const serveSchedules = (request: Request): Response => {
+  const url = new URL(request.url);
+  const route = url.pathname.split("/")[2];
+
+  if (route && tripsIxByRoute[route]) {
+    const tripIxs = tripsIxByRoute[route];
+
+    const body = tripIxs.map((tripIx) => {
+      const trip = trips[tripIx];
+
+      const schedules = (stopTimesIxByTrip[trip.tripID] || []).map(
+        (stopTimeIx) => {
+          const stopTime = stopTimes[stopTimeIx];
+          return {
+            stop_id: stopTime.stopID,
+            arrival_time: stopTime.arrival,
+            departure_time: stopTime.departure,
+          };
+        },
+      );
+
+      return {
+        trip_id: trip.tripID,
+        route_id: trip.routeID,
+        service_id: trip.serviceID,
+        schedules: schedules,
+      };
+    });
+
+    return new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } else {
+    return new Response("Not Found", { status: 404 });
+  }
+};
+
+console.log("HTTP webserver running. Access it at: http://localhost:4000/");
+await serve(serveSchedules, { port: 4000 });

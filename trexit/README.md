@@ -1,14 +1,18 @@
 # Trexit
 
-```
-> elixir --version
-Erlang/OTP 25 [erts-13.0.4] [source] [64-bit] [smp:8:8] [ds:8:8:10] [async-threads:1] [jit]
+To start your Phoenix server:
 
-Elixir 1.14.0 (compiled with Erlang/OTP 25)
-```
+  * Install dependencies with `mix deps.get`
+  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
 
-Run with:
+Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
-```
-> mix schedules Red
-```
+Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+
+## Learn more
+
+  * Official website: https://www.phoenixframework.org/
+  * Guides: https://hexdocs.pm/phoenix/overview.html
+  * Docs: https://hexdocs.pm/phoenix
+  * Forum: https://elixirforum.com/c/phoenix-forum
+  * Source: https://github.com/phoenixframework/phoenix

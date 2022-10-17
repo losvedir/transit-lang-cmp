@@ -2,8 +2,12 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -20,30 +24,75 @@ type Trip struct {
 	ServiceID string
 }
 
-func main() {
-	route := os.Args[1]
+type TripResponse struct {
+	TripID    string             `json:"trip_id"`
+	ServiceID string             `json:"service_id"`
+	RouteID   string             `json:"route_id"`
+	Schedules []ScheduleResponse `json:"schedules"`
+}
 
-	_, stsByTrip := getStopTimes()
-	trips, tripsByRoute := getTrips()
+type ScheduleResponse struct {
+	StopID    string `json:"stop_id"`
+	Arrival   string `json:"arrival_time"`
+	Departure string `json:"departure_time"`
+}
 
-	t1 := time.Now()
+func buildTripResponse(
+	route string,
+	stopTimes []StopTime,
+	stopTimesIxByTrip map[string][]int,
+	trips []Trip,
+	tripsIxByRoute map[string][]int,
+) []TripResponse {
+	tripIxs, ok := tripsIxByRoute[route]
 
-	scheduleCount := 0
+	resp := []TripResponse{}
 
-	ts, ok := tripsByRoute[route]
 	if ok {
-		for _, t_ix := range ts {
-			trip := trips[t_ix]
-			sts, ok := stsByTrip[trip.TripID]
-			if ok {
-				scheduleCount += len(sts)
+		for tripIx := range tripIxs {
+			trip := trips[tripIx]
+			tripResponse := TripResponse{
+				TripID:    trip.TripID,
+				ServiceID: trip.ServiceID,
+				RouteID:   trip.RouteID,
+				Schedules: []ScheduleResponse{},
 			}
+
+			stopTimeIxs, ok := stopTimesIxByTrip[trip.TripID]
+			if ok {
+				for stopTimeIx := range stopTimeIxs {
+					stopTime := stopTimes[stopTimeIx]
+					tripResponse.Schedules = append(tripResponse.Schedules, ScheduleResponse{
+						StopID:    stopTime.StopID,
+						Arrival:   stopTime.Arrival,
+						Departure: stopTime.Departure,
+					})
+				}
+			}
+			resp = append(resp, tripResponse)
 		}
 	}
+	return resp
+}
 
-	t2 := time.Now()
+func main() {
+	stopTimes, stopTimesIxByTrip := getStopTimes()
+	trips, tripsIxByRoute := getTrips()
 
-	fmt.Println("Identified", scheduleCount, "stops in", t2.Sub(t1))
+	http.HandleFunc("/schedules/", func(w http.ResponseWriter, r *http.Request) {
+		route := strings.Split(r.URL.Path, "/")[2]
+		resp := buildTripResponse(route, stopTimes, stopTimesIxByTrip, trips, tripsIxByRoute)
+		w.Header().Set("Content-Type", "application/json")
+		json_resp, err := json.Marshal(resp)
+		if err != nil {
+			fmt.Println("json error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("500 - Something bad happened!"))
+		} else {
+			w.Write(json_resp)
+		}
+	})
+	log.Fatal(http.ListenAndServe(":4000", nil))
 }
 
 func getStopTimes() ([]StopTime, map[string][]int) {
