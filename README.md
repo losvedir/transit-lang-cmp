@@ -45,6 +45,7 @@ from the trip ID to a list of indices into the big stop time list.
 
 | Language | Time (ms) |
 | -------- | --------- |
+| C#       | 1,390     |
 | Deno     | 2,905     |
 | Elixir   | 5,986     |
 | Go       | 842       |
@@ -87,6 +88,7 @@ webserver approach, but am keeping the stats here for posterity.
 
 | Language | Time (ms) |
 | -------- | --------- |
+| C#       | 1.0       |
 | Deno     | 1.4       |
 | Elixir   | 3.2       |
 | Go       | 0.4       |
