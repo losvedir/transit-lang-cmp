@@ -50,6 +50,7 @@ from the trip ID to a list of indices into the big stop time list.
 | Elixir   | 5,986     |
 | Go       | 842       |
 | Rust     | 565       |
+| Scala    | 931       |
 | SQLite   | ~ 4,000   |
 
 ### Webserver performance
@@ -94,6 +95,7 @@ webserver approach, but am keeping the stats here for posterity.
 | Elixir   | 3.2       |
 | Go       | 0.4       |
 | Rust     | 0.7       |
+| Scala    | 2.5       |
 | SQLite   | 13        |
 
 ## Thoughts
@@ -296,6 +298,10 @@ all my handlers can read the data I prepare up front, but I could see how I
 could wrap it in an `RwLock`, for example, to also allow safe updates in the
 future. In general, I'm not sure how I feel about Axum's magical
 handler/extractor setup, as I still don't really know how it works.
+
+### Scala
+
+`sbt run` is slow!
 
 ### SQLite
 
