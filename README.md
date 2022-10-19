@@ -75,6 +75,7 @@ highest RAM and CPU usage I see in ActivityMonitor just out of curiosity.
 
 | Language | Requests/sec | Max CPU (%) | Max RAM (MB) |
 | -------- | ------------ | ----------- | ------------ |
+| C#       | 1,534        | 654         | 1,750        |
 | Deno     | 286          | 280         | 400          |
 | Elixir   | 82           | 670         | 2,700        |
 | Go       | 1,994        | 620         | 1,100        |
@@ -98,6 +99,54 @@ webserver approach, but am keeping the stats here for posterity.
 ## Thoughts
 
 Here are some scattered thoughts while I went about writing this.
+
+### C#
+
+Where to begin! First, I went into this very confused at just a jargon level of
+what all the different pieces of the Microsoft ecosystem are. C# is the language
+and it runs on the ".NET CLR". The build/run tool is `dotnet` so that's kind of
+the main term, but I also saw "CLR" thrown around. I ended up working with ".NET
+6.0", which is what all the guides and docs called it, and which was cross
+platform. I didn't see ".NET Core" anywhere like I was expecting, which I
+believe is what _used_ to be the explicitly cross-platform piece? Amusingly, I
+spent a fair bit of time trying to look up the standard ".NET web framework"
+before eventually finally realizing that that's what ASP.NET is. So that was
+useful to connect for me, since I've seen "ASP" a lot but had had no idea how it
+fit into the picture.
+
+I wasn't entirely sure I'd even be able to complete this project. I wasn't sure
+how truly cross platform .NET was, in reality, though development went off
+without a hitch! I'm going to say, yes, at least for my simple use case of using
+the standard library plus ASP.NET, it's truly cross platform. I didn't try
+bringing in any 3rd party libraries, and I imagine there could be some
+incompatibilities there. In the future I'd like to explore F#, which is a
+language more inline with my sensibilities, but I wanted to try more "vanilla
+.NET" first.
+
+As for the language, C# is... all right, I guess. It kind of reminds me of Dart;
+it works fine, the tooling is good, it's verbose and very object oriented, but
+it doesn't really spark joy. The "billion dollar mistake" is important to me,
+and while C# has non-nullability sugar in its typesystem (i.e. with `?` after a
+number of types). Though the type system wasn't as rigorous as I was maybe
+hoping. At one point I had a bug because I did a `stopWatch.Elapsed / 1000` by
+accident instead of `stopWatch.ElapsedTicks / 1000`. The former is a `TimeSpan`
+struct instead of a `long` like `ElapsedTicks`, so it intuitively it feels like
+I shouldn't be able to divide it, though it did a best effort and did
+_something_ to it, though I'm not quite sure what.
+
+ASP.NET has a lot of conventions and magic. I don't personally love all that
+magic but if you're experienced with it, I could see how it would make designing
+web apps pretty quick.
+
+I was pretty impressed with the performance! It was comparable to my unoptimized
+Rust (i.e.: treating Rust like a high level language with lots of clones).
+
+Oh, and I hate, hate, hate the default formatter's convention to put opening
+curly braces on their own line rather than at the end of the previous line. It
+contributed to the feeling that C# is very, very verbose, and I found myself
+scrolling a lot more than I liked. I find vertical real estate important and
+having more visible code on screen without scrolling helps keep me "in context"
+a little better.
 
 ### Deno
 

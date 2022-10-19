@@ -19,5 +19,6 @@ Runtime Environment:
 To run:
 
 ```
-> dotnet run Red
+> dotnet build --configuration Release
+> ./bin/Release/net6.0/Trannet --urls http://localhost:4000
 ```
