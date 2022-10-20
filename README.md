@@ -81,6 +81,7 @@ highest RAM and CPU usage I see in ActivityMonitor just out of curiosity.
 | Elixir   | 82           | 670         | 2,700        |
 | Go       | 1,994        | 620         | 1,100        |
 | Rust     | 1,640        | 600         | 470          |
+| Scala    | 432          | 715         | 3,150        |
 
 ### Searching the data
 
@@ -301,7 +302,105 @@ handler/extractor setup, as I still don't really know how it works.
 
 ### Scala
 
-`sbt run` is slow!
+Of all the languages I played with here, Scala is the only one I disliked.
+
+Part of the reason was timing: it seems an ecosystem in flux at the moment. It
+didn't work with my JDK 19 out of the box, so I had to downgrade to JDK 17 for
+it. I sort of blindly followed the scala-lang.org site and went through the
+getting started guide, for Scala 3, and then building the first half of my app
+in Scala 3, before realizing that Play (the only Scala webframework I'd heard
+of) and Scalatra (the other web framework mentioned in the Getting Started
+"ecosystem" section of the guide) don't work on Scala 3 yet. I briefly tried
+updating my code to Scala 2 but I wasn't super sure what the differences were,
+and I didn't really want to learn Scala 2 if everything is moving to Scala 3
+(eventually) anyway. Beyond that I got mixed messages in whether to use `sbt`
+and `mill` as a build tool.
+
+Beyond that, there seems to be a schism in the community between people who love
+super sophisticated types (think Haskell style Applicative Functors or whatever)
+and people who want a nicer Java (these days those people might be moving to
+Kotlin).
+
+In trying to find a Scala 3 compatible web framework, I saw a lot of people
+saying `http4s` is the new standard, so I tried that one first. But after
+generating the skeleton for the app, and trying to add my own routes I gave up.
+The "router" part is unwieldy and complicated, though I think I was able to
+cargo-cult a route of my own. Here's the given example on how to match against
+`/hello/:name`:
+
+```scala
+def helloWorldRoutes[F[_]: Sync](H: HelloWorld[F]): HttpRoutes[F] =
+  val dsl = new Http4sDsl[F]{}
+  import dsl._
+  HttpRoutes.of[F] {
+    case GET -> Root / "hello" / name =>
+      for {
+        greeting <- H.hello(HelloWorld.Name(name))
+        resp <- Ok(greeting)
+      } yield resp
+  }
+```
+
+But then when it comes to implementing the code that actually returns data
+there, I got totally flummoxed. Here's the corresponding "HelloWorld" code for
+the above route:
+
+```scala
+import cats.Applicative
+import cats.implicits._
+import io.circe.{Encoder, Json}
+import org.http4s.EntityEncoder
+import org.http4s.circe._
+
+trait HelloWorld[F[_]]:
+  def hello(n: HelloWorld.Name): F[HelloWorld.Greeting]
+
+object HelloWorld:
+  def apply[F[_]](using ev: HelloWorld[F]): HelloWorld[F] = ev
+
+  final case class Name(name: String) extends AnyVal
+  /**
+    * More generally you will want to decouple your edge representations from
+    * your internal data structures, however this shows how you can
+    * create encoders for your data.
+    **/
+  final case class Greeting(greeting: String) extends AnyVal
+  object Greeting:
+    given Encoder[Greeting] = new Encoder[Greeting]:
+      final def apply(a: Greeting): Json = Json.obj(
+        ("message", Json.fromString(a.greeting)),
+      )
+
+    given [F[_]]: EntityEncoder[F, Greeting] =
+      jsonEncoderOf[F, Greeting]
+
+  def impl[F[_]: Applicative]: HelloWorld[F] = new HelloWorld[F]:
+    def hello(n: HelloWorld.Name): F[HelloWorld.Greeting] =
+        Greeting("Hello, " + n.name).pure[F]
+```
+
+That's a _lot_ of both syntax and semantics to grok. `trait` is an interface,
+`object` is a singleton class, `case class` is kind of a data record. I don't
+know what `given` or `using` are. I recognize `pure` as related to `Applicative`
+but that's a whole complicated library/type concern distinct from
+Scala-the-language. I don't really know why the `def impl` does a
+`new HelloWorld` with a nested `def hello`.
+
+In the end, I moved on to trying the framework Cask, which
+
+> aims to bring simplicity, flexibility and ease-of-use to Scala webservers,
+> avoiding cryptic DSLs or complicated asynchrony
+
+And in the end, I got something that worked! So thanks author of Cask. Cask also
+used `mill` rather than `sbt`. The latter seems more "official", or at least is
+the tool recommended on scala-lang.org, but oh BOY is it slow! `mill` was nicer
+for me to work with.
+
+The performance was not super great, and it used the most memory by far. I don't
+know if this is because Cask is not performance-focused, but then I couldn't get
+anything else to work... I liked Scala 3 well enough before dealing with the
+ecosystem, but I think in the future I'm going to avoid Scala until it finishes
+its 2 to 3 transition, and only if the non-typenerds win.
 
 ### SQLite
 
