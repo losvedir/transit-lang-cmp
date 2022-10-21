@@ -2,7 +2,11 @@
 
 This repository implements the same simple backend API in a variety of
 languages. It's just a personal project of mine to get a feel for the languages,
-and shouldn't be taken _too_ seriously.
+and shouldn't be taken _too_ seriously. So far I've built it in C#, Typescript
+(Deno), Elixir, Go, Rust, and Scala. Star the repository and/or follow me on
+Twitter (@losvedir) if you want updates on the project. I hope to eventually get
+to Swift, Kotlin, ordinary Java, Nim, and Zig. And feel free to open an issue if
+you want to suggest another language, or a PR if you want to implement one!
 
 All the apps read in the MBTA's GTFS data, which is the standard spec for
 transit data - stuff like the routes, stops, and schedules for a system. The
@@ -25,9 +29,15 @@ interested to see how long this takes, as it's a bunch of IO - there are roughly
 also like to handle "services", which specify which trips run on which days.
 
 The apps set up a simple webserver that responds to `/schedules/:route`
-requests, and returns a JSON response of all the StopTimes for that route. This
-involves a "join" through trips, and for some routes serializes a bunch of data.
-(The most, I think, is for the Red line at about 7MB of a response.)
+requests, and returns a JSON response of all the "schedules" (trips with
+included stop_times) for that route. This involves a "join" through trips, and
+for some routes serializes a bunch of data. (The most, I think, is for the Red
+line at about 7MB of a response.) I represented it this way because even though
+so far I've only implemented some of the functionality, I think it makes sense
+conceptually to want to look up trips by route_id and/or service_id, and to look
+up stop_times by trip_id and/or stop_id. So rather than just storing the data as
+a hashmap, I figured it was better to store the data as a big list, and have
+various handles into it.
 
 ## Data
 
@@ -124,18 +134,19 @@ the standard library plus ASP.NET, it's truly cross platform. I didn't try
 bringing in any 3rd party libraries, and I imagine there could be some
 incompatibilities there. In the future I'd like to explore F#, which is a
 language more inline with my sensibilities, but I wanted to try more "vanilla
-.NET" first.
+.NET" first. The developer experience in VSCode was great, and the language
+server worked well.
 
 As for the language, C# is... all right, I guess. It kind of reminds me of Dart;
 it works fine, the tooling is good, it's verbose and very object oriented, but
 it doesn't really spark joy. The "billion dollar mistake" is important to me,
 and while C# has non-nullability sugar in its typesystem (i.e. with `?` after a
-number of types). Though the type system wasn't as rigorous as I was maybe
-hoping. At one point I had a bug because I did a `stopWatch.Elapsed / 1000` by
-accident instead of `stopWatch.ElapsedTicks / 1000`. The former is a `TimeSpan`
-struct instead of a `long` like `ElapsedTicks`, so it intuitively it feels like
-I shouldn't be able to divide it, though it did a best effort and did
-_something_ to it, though I'm not quite sure what.
+number of types), the type system wasn't as rigorous as I was maybe hoping. At
+one point I had a bug because I did a `stopWatch.Elapsed / 1000` by accident
+instead of `stopWatch.ElapsedTicks / 1000`. The former is a `TimeSpan` struct
+instead of a `long` like `ElapsedTicks`, so intuitively it feels like I
+shouldn't be able to divide it, though it did a best effort and did _something_
+to it, though I'm not quite sure what.
 
 ASP.NET has a lot of conventions and magic. I don't personally love all that
 magic but if you're experienced with it, I could see how it would make designing
@@ -150,6 +161,8 @@ contributed to the feeling that C# is very, very verbose, and I found myself
 scrolling a lot more than I liked. I find vertical real estate important and
 having more visible code on screen without scrolling helps keep me "in context"
 a little better.
+
+All in all, I was pleasantly surprised and pretty impressed.
 
 ### Deno
 
@@ -174,6 +187,12 @@ to me. I don't think other languages really have that, and I'm not sure what the
 threat model is here. I control the backend code, and if I'm worried about my
 code doing unexpected things like that I have larger issues. I just run with
 `-A` all the time.
+
+The performance wasn't as good as I was expecting. I know it's not a compiled
+language but V8 has been so tuned I was expecting a bit more. I already knew I
+liked the language, from using it on the frontend, and so I learned that deno is
+a pretty good option for scripts and such. I don't know that I'd want to choose
+it for a very large application yet, though.
 
 ### Elixir
 
@@ -204,6 +223,9 @@ I used Phoenix here since that's pretty much the standard in Elixir, though it
 might be a bit heavier weight than the other apps. But my understanding is that
 it's mostly just plugs that get compiled in, so it's pretty lightweight in how
 much it actually affects performance vs the minimal possible thing I could do.
+
+The final performance results were distressingly low, an order of magnitude
+worse than Go and Rust.
 
 ### Go
 
@@ -249,7 +271,7 @@ to decide _which_ framework to use.
 ### Rust
 
 This one shocked me in a good way! I was expecting a lot more low level
-fiddlyness, but was prepared to simply allocate and clone and do all the tricks
+fiddlyness, and was prepared to simply allocate and clone and do all the tricks
 I've read about to not worry about eking out the most performance possible.
 After all, I'm comparing against higher level interpreted or GC languages, and
 am interested in Rust more for its type system than needing to program at a
@@ -258,7 +280,7 @@ system level.
 All that said, the performance ended up quite respectable, even with ample
 String cloning, and was just as easy to do! To be fair, I've had some experience
 playing with Rust in the past, so it wasn't brand new to me, but it has been
-some time so I was expecting too be a lot more, uh... rusty.
+some time so I was expecting to be a lot more, uh... rusty.
 
 Also, I don't know how much of this is because Rust is special or because
 BurntSushi is a national treasure and his CSV library is impeccably constructed
