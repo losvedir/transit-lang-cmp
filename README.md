@@ -1,4 +1,4 @@
-# Transit Data apps in various programming languages
+# An informal comparison of several programming languages
 
 This repository implements the same simple backend API in a variety of
 languages. It's just a personal project of mine to get a feel for the languages,
