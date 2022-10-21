@@ -84,6 +84,13 @@ the load from the test harness wouldn't disrupt the response data too badly.
 Here I report the requests/sec that k6 spits out, and also an eyeball at the
 highest RAM and CPU usage I see in ActivityMonitor just out of curiosity.
 
+#### JSON heavy
+
+These use the `loadTest.js` file which includes about a hundred of the MBTA
+routes, many of which have JSON schedule data in the megabytes. Consequently,
+the performance here is largely a reflection of how fast JSON can be serialized.
+All these were with 50 concurrent virtual users.
+
 | Language | Requests/sec | Max CPU (%) | Max RAM (MB) |
 | -------- | ------------ | ----------- | ------------ |
 | C#       | 1,534        | 654         | 1,750        |
@@ -92,6 +99,38 @@ highest RAM and CPU usage I see in ActivityMonitor just out of curiosity.
 | Go       | 1,994        | 620         | 1,100        |
 | Rust     | 1,640        | 600         | 470          |
 | Scala    | 432          | 715         | 3,150        |
+
+#### Smaller responses
+
+These use the `loadTestSmallResponses.js` runner, and only use about a dozen
+routes whose schedule data is in the ~50KB to ~200KB range, so the requests are
+a lot higher, and less dominated by JSON encoding. Since the responses are
+smaller and more requests can be handled, I also tried it with different number
+of concurrent "virtual users".
+
+Requests per second, by language and concurrent virtual user count (higher is
+better).
+
+| Language | 1 VU  | 10 VU  | 50 VU  | 100 VU |
+| -------- | ----- | ------ | ------ | ------ |
+| C#       | 2,227 | 11,663 | 13,005 | 13,102 |
+| Deno     | 2,808 | 3,882  | 3,852  | 3,753  |
+| Elixir   | 43    | 196    | 579    | 847    |
+| Go       | 2,056 | 8,290  | 8,600  | 8,613  |
+| Rust     | 2,291 | 12,004 | 12,586 | 12,602 |
+| Scala    | 705   | 4,204  | 4,289  | 4,332  |
+
+Response times in milliseconds: median / p95 / max, by language and concurrent
+virtual user count (lower is better):
+
+| Language | 1 VU          | 10 VU         | 50 VU         | 100 VU          |
+| -------- | ------------- | ------------- | ------------- | --------------- |
+| C#       | .3 / 1 / 88   | .6 / 2 / 27   | 2 / 12 / 138  | 6 / 17 / 75     |
+| Deno     | .3 / .8 / 5   | 2 / 4 / 254   | 13 / 16 / 218 | 26 / 33 / 265   |
+| Elixir   | 22 / 28 / 109 | 51 / 58 / 149 | 86 / 97 / 161 | 119 / 142 / 244 |
+| Go       | .3 / 1 / 12   | .8 / 3 / 37   | 3 / 20 / 90   | 7 / 40 / 214    |
+| Rust     | .3 / .9 / 3   | .6 / 2 / 21   | 4 / 7 / 33    | 8 / 14 / 77     |
+| Scala    | 1 / 3 / 109   | 2 / 5 / 129   | 3 / 58 / 394  | 10 / 109 / 587  |
 
 ### Searching the data
 
@@ -134,8 +173,9 @@ the standard library plus ASP.NET, it's truly cross platform. I didn't try
 bringing in any 3rd party libraries, and I imagine there could be some
 incompatibilities there. In the future I'd like to explore F#, which is a
 language more inline with my sensibilities, but I wanted to try more "vanilla
-.NET" first. The developer experience in VSCode was great, and the language
-server worked well.
+.NET" first. The developer experience in VSCode was great, the language server
+worked well, and the code formatter worked (though I despise the convention of
+opening curly braces on the next line).
 
 As for the language, C# is... all right, I guess. It kind of reminds me of Dart;
 it works fine, the tooling is good, it's verbose and very object oriented, but
@@ -152,17 +192,13 @@ ASP.NET has a lot of conventions and magic. I don't personally love all that
 magic but if you're experienced with it, I could see how it would make designing
 web apps pretty quick.
 
-I was pretty impressed with the performance! It was comparable to my unoptimized
-Rust (i.e.: treating Rust like a high level language with lots of clones).
+But, wow, I was incredibly surprised and impressed with the performance! It was
+comparable to my unoptimized Rust (i.e.: treating Rust like a high level
+language with lots of clones) in the JSON-heavy benchmark, and the fastest of
+all the languages at higher concurrency levels in the lighter-response
+benchmark!
 
-Oh, and I hate, hate, hate the default formatter's convention to put opening
-curly braces on their own line rather than at the end of the previous line. It
-contributed to the feeling that C# is very, very verbose, and I found myself
-scrolling a lot more than I liked. I find vertical real estate important and
-having more visible code on screen without scrolling helps keep me "in context"
-a little better.
-
-All in all, I was pleasantly surprised and pretty impressed.
+All in all, I was pleasantly surprised and pretty impressed with dotnet and C#.
 
 ### Deno
 
@@ -188,11 +224,9 @@ threat model is here. I control the backend code, and if I'm worried about my
 code doing unexpected things like that I have larger issues. I just run with
 `-A` all the time.
 
-The performance wasn't as good as I was expecting. I know it's not a compiled
-language but V8 has been so tuned I was expecting a bit more. I already knew I
-liked the language, from using it on the frontend, and so I learned that deno is
-a pretty good option for scripts and such. I don't know that I'd want to choose
-it for a very large application yet, though.
+The performance was great when looking at a single virtual user, but sort of
+topped out there. I don't know if it just can't handle async and multiple cores
+very well, or if I was doing something wrong.
 
 ### Elixir
 
@@ -225,13 +259,14 @@ it's mostly just plugs that get compiled in, so it's pretty lightweight in how
 much it actually affects performance vs the minimal possible thing I could do.
 
 The final performance results were distressingly low, an order of magnitude
-worse than Go and Rust.
+worse than Go, Rust, and dotnet.
 
 ### Go
 
 I was super happy to get the work done so far using just the standard library.
-And the performance blew me away! In this iteration (commit) it actually beats
-Rust somehow.
+And the performance was solid! In the JSON-heavy benchmark it actually is the
+fastest of all the languages, though in the lighter-response benchmark it's more
+where I expected: fast, but not quite at rust levels.
 
 That said, contrary to my expectations, I found the documentation not great.
 While the language reference and tour was pretty good and useful (I kept
@@ -277,8 +312,8 @@ After all, I'm comparing against higher level interpreted or GC languages, and
 am interested in Rust more for its type system than needing to program at a
 system level.
 
-All that said, the performance ended up quite respectable, even with ample
-String cloning, and was just as easy to do! To be fair, I've had some experience
+All that said, the performance ended up quite good, even with ample String
+cloning, and was just as easy to do! To be fair, I've had some experience
 playing with Rust in the past, so it wasn't brand new to me, but it has been
 some time so I was expecting to be a lot more, uh... rusty.
 
@@ -451,3 +486,16 @@ which keep everything in memory, but of course the tradeoff then is it uses much
 less memory! And while a given read is slow(-ish), I understand that a lot of it
 is waiting on the filesystem, and that concurrent reads should allow plenty of
 throughput.
+
+### Swift
+
+Notes from in-progress work on Swift.
+
+- Had to download many-GB Xcode, which had a host of issues (had to login)
+- did `swift init` and then `swift run` and it crashed. Found a discussion
+  online where `sudo xcode-select --reset` was recommended and that got the
+  HelloWorld to run.
+- No code formatter?
+- Couldn't figure out how to read the relative MBTA_GTFS folder from my project
+  in xcode, but running `swift run` from the directory worked. (Though I had to
+  `swift package init` which xcode didn't need.)
