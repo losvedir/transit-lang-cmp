@@ -117,7 +117,7 @@ better).
 | Deno     | 2,808 | 3,882  | 3,852  | 3,753  |
 | Elixir   | 43    | 196    | 579    | 847    |
 | Go       | 2,056 | 8,290  | 8,600  | 8,613  |
-| Rust     | 2,291 | 12,004 | 12,586 | 12,602 |
+| Rust     | 3,147 | 17,884 | 19,000 | 18,896 |
 | Scala    | 705   | 4,204  | 4,289  | 4,332  |
 
 Response times in milliseconds: median / p95 / max, by language and concurrent
@@ -129,7 +129,7 @@ virtual user count (lower is better):
 | Deno     | .3 / .8 / 5   | 2 / 4 / 254   | 13 / 16 / 218 | 26 / 33 / 265   |
 | Elixir   | 22 / 28 / 109 | 51 / 58 / 149 | 86 / 97 / 161 | 119 / 142 / 244 |
 | Go       | .3 / 1 / 12   | .8 / 3 / 37   | 3 / 20 / 90   | 7 / 40 / 214    |
-| Rust     | .3 / .9 / 3   | .6 / 2 / 21   | 4 / 7 / 33    | 8 / 14 / 77     |
+| Rust     | .2 / .6 / 3   | .4 / 1 / 32   | 2 / 5 / 40    | 5 / 10 / 131    |
 | Scala    | 1 / 3 / 109   | 2 / 5 / 129   | 3 / 58 / 394  | 10 / 109 / 587  |
 
 ### Searching the data
@@ -194,9 +194,7 @@ web apps pretty quick.
 
 But, wow, I was incredibly surprised and impressed with the performance! It was
 comparable to my unoptimized Rust (i.e.: treating Rust like a high level
-language with lots of clones) in the JSON-heavy benchmark, and the fastest of
-all the languages at higher concurrency levels in the lighter-response
-benchmark!
+language with lots of clones)!
 
 All in all, I was pleasantly surprised and pretty impressed with dotnet and C#.
 
@@ -312,10 +310,15 @@ After all, I'm comparing against higher level interpreted or GC languages, and
 am interested in Rust more for its type system than needing to program at a
 system level.
 
-All that said, the performance ended up quite good, even with ample String
-cloning, and was just as easy to do! To be fair, I've had some experience
-playing with Rust in the past, so it wasn't brand new to me, but it has been
-some time so I was expecting to be a lot more, uh... rusty.
+I've had some experience playing with Rust in the past, so it wasn't brand new
+to me, but it has been some time so I was expecting to be a lot more, uh...
+rusty. All that said, with my initial approach, I just did a lot of String
+cloning and got performance comparable to the best of the other languages
+(dotnet or Go, depending on the benchmark). But then after a bit of help from
+reddit, I removed some unnecessary String allocations, using `&str` and dreaded
+(to me) lifetime markers, so that the response structs just referenced the
+strings allocated in the actual data, and the performance jumped dramatically,
+to be far and away the most performant language.
 
 Also, I don't know how much of this is because Rust is special or because
 BurntSushi is a national treasure and his CSV library is impeccably constructed

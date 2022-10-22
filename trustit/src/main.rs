@@ -26,18 +26,18 @@ struct Trip {
 }
 
 #[derive(Debug, Serialize)]
-struct TripResponse {
-    trip_id: String,
-    service_id: String,
-    route_id: String,
-    schedules: Vec<ScheduleResponse>,
+struct TripResponse<'data> {
+    trip_id: &'data str,
+    service_id: &'data str,
+    route_id: &'data str,
+    schedules: Vec<ScheduleResponse<'data>>,
 }
 
 #[derive(Debug, Serialize)]
-struct ScheduleResponse {
-    stop_id: String,
-    arrival_time: String,
-    departure_time: String,
+struct ScheduleResponse<'data> {
+    stop_id: &'data str,
+    arrival_time: &'data str,
+    departure_time: &'data str,
 }
 
 struct Data {
@@ -71,7 +71,7 @@ async fn main() {
 async fn schedule_handler(
     Path(route_id): Path<String>,
     State(data): State<Arc<Data>>,
-) -> impl IntoResponse {
+) -> axum::response::Response {
     let mut resp: Vec<TripResponse> = Vec::new();
 
     if let Some(trip_ixs) = data.trips_ix_by_route.get(&route_id) {
@@ -82,22 +82,22 @@ async fn schedule_handler(
                 for stop_time_ix in stop_time_ixs {
                     let stop_time = &data.stop_times[*stop_time_ix];
                     schedules.push(ScheduleResponse {
-                        stop_id: stop_time.stop_id.clone(),
-                        arrival_time: stop_time.arrival.clone(),
-                        departure_time: stop_time.departure.clone(),
+                        stop_id: &stop_time.stop_id,
+                        arrival_time: &stop_time.arrival,
+                        departure_time: &stop_time.departure,
                     });
                 }
             }
             resp.push(TripResponse {
-                trip_id: trip.trip_id.clone(),
-                service_id: trip.service_id.clone(),
-                route_id: trip.route_id.clone(),
+                trip_id: &trip.trip_id,
+                service_id: &trip.service_id,
+                route_id: &trip.route_id,
                 schedules: schedules,
             })
         }
-        Json(resp)
+        Json(resp).into_response()
     } else {
-        Json(resp)
+        Json(resp).into_response()
     }
 }
 
