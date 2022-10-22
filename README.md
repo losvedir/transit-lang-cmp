@@ -97,7 +97,7 @@ All these were with 50 concurrent virtual users.
 | Deno     | 286          | 280         | 400          |
 | Elixir   | 82           | 670         | 2,700        |
 | Go       | 1,994        | 620         | 1,100        |
-| Rust     | 1,640        | 600         | 470          |
+| Rust     | 2,577        | 619         | 603          |
 | Scala    | 432          | 715         | 3,150        |
 
 #### Smaller responses
