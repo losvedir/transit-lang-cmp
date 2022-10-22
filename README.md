@@ -97,7 +97,7 @@ All these were with 50 concurrent virtual users.
 | Deno     | 286          | 280         | 400          |
 | Elixir   | 82           | 670         | 2,700        |
 | Go       | 1,994        | 620         | 1,100        |
-| Rust     | 2,577        | 619         | 603          |
+| Rust     | 2,682        | 619         | 603          |
 | Scala    | 432          | 715         | 3,150        |
 
 #### Smaller responses
@@ -117,7 +117,7 @@ better).
 | Deno     | 2,808 | 3,882  | 3,852  | 3,753  |
 | Elixir   | 43    | 196    | 579    | 847    |
 | Go       | 2,056 | 8,290  | 8,600  | 8,613  |
-| Rust     | 3,147 | 17,884 | 19,000 | 18,896 |
+| Rust     | 3,227 | 18,002 | 19,511 | 19,345 |
 | Scala    | 705   | 4,204  | 4,289  | 4,332  |
 
 Response times in milliseconds: median / p95 / max, by language and concurrent
@@ -129,7 +129,7 @@ virtual user count (lower is better):
 | Deno     | .3 / .8 / 5   | 2 / 4 / 254   | 13 / 16 / 218 | 26 / 33 / 265   |
 | Elixir   | 22 / 28 / 109 | 51 / 58 / 149 | 86 / 97 / 161 | 119 / 142 / 244 |
 | Go       | .3 / 1 / 12   | .8 / 3 / 37   | 3 / 20 / 90   | 7 / 40 / 214    |
-| Rust     | .2 / .6 / 3   | .4 / 1 / 32   | 2 / 5 / 40    | 5 / 10 / 131    |
+| Rust     | .2 / .6 / 3   | .4 / 1 / 50   | 2 / 5 / 54    | 5 / 10 / 76     |
 | Scala    | 1 / 3 / 109   | 2 / 5 / 129   | 3 / 58 / 394  | 10 / 109 / 587  |
 
 ### Searching the data

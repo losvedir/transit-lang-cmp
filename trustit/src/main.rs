@@ -77,17 +77,22 @@ async fn schedule_handler(
     if let Some(trip_ixs) = data.trips_ix_by_route.get(&route_id) {
         for trip_ix in trip_ixs {
             let trip = &data.trips[*trip_ix];
-            let mut schedules: Vec<ScheduleResponse> = Vec::new();
-            if let Some(stop_time_ixs) = data.stop_times_ix_by_trip.get(&trip.trip_id) {
-                for stop_time_ix in stop_time_ixs {
-                    let stop_time = &data.stop_times[*stop_time_ix];
-                    schedules.push(ScheduleResponse {
-                        stop_id: &stop_time.stop_id,
-                        arrival_time: &stop_time.arrival,
-                        departure_time: &stop_time.departure,
-                    });
-                }
-            }
+            let schedules: Vec<ScheduleResponse> =
+                if let Some(stop_time_ixs) = data.stop_times_ix_by_trip.get(&trip.trip_id) {
+                    stop_time_ixs
+                        .iter()
+                        .map(|stop_time_ix| {
+                            let stop_time = &data.stop_times[*stop_time_ix];
+                            ScheduleResponse {
+                                stop_id: &stop_time.stop_id,
+                                arrival_time: &stop_time.arrival,
+                                departure_time: &stop_time.departure,
+                            }
+                        })
+                        .collect()
+                } else {
+                    Vec::new()
+                };
             resp.push(TripResponse {
                 trip_id: &trip.trip_id,
                 service_id: &trip.service_id,
