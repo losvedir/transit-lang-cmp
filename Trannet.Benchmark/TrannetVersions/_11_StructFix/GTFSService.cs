@@ -23,7 +23,7 @@ public static class GTFSService
         {
             var stopTimes = CollectionsMarshal.AsSpan(StopTimes);
             var trips = CollectionsMarshal.AsSpan(Trips);
-
+            
             foreach (var tripIx in CollectionsMarshal.AsSpan(tripIxs))
             {
                 ref var trip = ref trips[tripIx];
