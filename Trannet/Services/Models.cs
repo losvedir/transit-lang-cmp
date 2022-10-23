@@ -45,10 +45,10 @@ public readonly struct Trip
 
 public class TripResponse
 {
-    public readonly string trip_id;
-    public readonly string route_id;
-    public readonly string service_id;
-    public readonly List<StopTimeResponse> schedules;
+    public string trip_id { get; init; }
+    public string route_id { get; init; }
+    public string service_id { get; init; }
+    public List<StopTimeResponse> schedules { get; init; }
     public TripResponse(ref Trip trip, List<StopTimeResponse> stop_time_responses)
     {
         trip_id = trip.TripID;
