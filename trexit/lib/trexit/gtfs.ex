@@ -14,7 +14,7 @@ defmodule Trexit.GTFS do
             "schedules" =>
               :ets.select(
                 :stop_times,
-                for(st_ix <- st_ixs, do: {{st_ix, :_}, [], [:"$_"]})
+                for(st_ix <- st_ixs, do: {{st_ix, :_, :_, :_, :_}, [], [:"$_"]})
               )
               |> Enum.map(fn {_st_ix, _trip_id, stop_id, arrival_time, departure_time} ->
                 %{
