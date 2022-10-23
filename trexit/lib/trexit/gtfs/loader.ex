@@ -22,10 +22,8 @@ defmodule Trexit.GTFS.Loader do
   end
 
   def load() do
-    :ets.new(:stop_times, [:named_table, {:read_concurrency, true}])
-    :ets.new(:stop_times_ix_by_trip, [:named_table, {:read_concurrency, true}])
-    :ets.new(:trips, [:named_table, {:read_concurrency, true}])
-    :ets.new(:trips_ix_by_route, [:named_table, {:read_concurrency, true}])
+    :ets.new(:stop_times_by_trip, [:named_table, :bag, {:read_concurrency, true}])
+    :ets.new(:trips_by_route, [:named_table, :bag, {:read_concurrency, true}])
 
     {time, _} =
       :timer.tc(fn ->
@@ -51,23 +49,18 @@ defmodule Trexit.GTFS.Loader do
     # assert column order
     ["trip_id", "arrival_time", "departure_time", "stop_id" | _] = header
 
-    Enum.with_index(rest, fn [trip_id, arrival_time, departure_time, stop_id | _], i ->
-      case :ets.lookup(:stop_times_ix_by_trip, trip_id) do
-        [] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [i]})
-        [{_, sts}] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [i | sts]})
-      end
-
-      :ets.insert(
-        :stop_times,
-        {i,
+    objects =
+      Enum.map(rest, fn [trip_id, arrival_time, departure_time, stop_id | _] ->
+        {trip_id,
          %StopTime{
            trip_id: trip_id,
            stop_id: stop_id,
            arrival: arrival_time,
            departure: departure_time
          }}
-      )
-    end)
+      end)
+
+    :ets.insert(:stop_times_by_trip, objects)
   end
 
   defp get_trips() do
@@ -79,21 +72,16 @@ defmodule Trexit.GTFS.Loader do
     # assert column order
     ["route_id", "service_id", "trip_id" | _] = header
 
-    Enum.with_index(rest, fn [route_id, service_id, trip_id | _], i ->
-      case :ets.lookup(:trips_ix_by_route, route_id) do
-        [] -> :ets.insert(:trips_ix_by_route, {route_id, [i]})
-        [{_, trips}] -> :ets.insert(:trips_ix_by_route, {route_id, [i | trips]})
-      end
-
-      :ets.insert(
-        :trips,
-        {i,
+    objects =
+      Enum.map(rest, fn [route_id, service_id, trip_id | _] ->
+        {route_id,
          %Trip{
            trip_id: trip_id,
            route_id: route_id,
            service_id: service_id
          }}
-      )
-    end)
+      end)
+
+    :ets.insert(:trips_by_route, objects)
   end
 end
