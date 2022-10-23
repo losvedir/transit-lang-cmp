@@ -95,7 +95,7 @@ All these were with 50 concurrent virtual users.
 | -------- | ------------ | ----------- | ------------ |
 | C#       | 1,534        | 654         | 1,750        |
 | Deno     | 286          | 280         | 400          |
-| Elixir   | 82           | 670         | 2,700        |
+| Elixir   | 167          | 750         | 3,700        |
 | Go       | 2,715        | 620         | 1,100        |
 | Rust     | 2,839        | 619         | 603          |
 | Scala    | 432          | 715         | 3,150        |
@@ -115,7 +115,7 @@ better).
 | -------- | ----- | ------ | ------ | ------ |
 | C#       | 2,227 | 11,663 | 13,005 | 13,102 |
 | Deno     | 2,808 | 3,882  | 3,852  | 3,753  |
-| Elixir   | 43    | 196    | 579    | 847    |
+| Elixir   | 390   | 2,287  | 2,240  | 2,145  |
 | Go       | 2,283 | 10,551 | 11,078 | 11,091 |
 | Rust     | 3,501 | 20,496 | 22,437 | 22,283 |
 | Scala    | 705   | 4,204  | 4,289  | 4,332  |
@@ -123,14 +123,14 @@ better).
 Response times in milliseconds: median / p95 / max, by language and concurrent
 virtual user count (lower is better):
 
-| Language | 1 VU          | 10 VU         | 50 VU         | 100 VU          |
-| -------- | ------------- | ------------- | ------------- | --------------- |
-| C#       | .3 / 1 / 88   | .6 / 2 / 27   | 2 / 12 / 138  | 6 / 17 / 75     |
-| Deno     | .3 / .8 / 5   | 2 / 4 / 254   | 13 / 16 / 218 | 26 / 33 / 265   |
-| Elixir   | 22 / 28 / 109 | 51 / 58 / 149 | 86 / 97 / 161 | 119 / 142 / 244 |
-| Go       | .3 / 1 / 19   | .6 / 2 / 36   | 3 / 15 / 111  | 6 / 29 / 140    |
-| Rust     | .2 / .6 / 3   | .4 / 1 / 9    | 2 / 4 / 36    | 4 / 9 / 85      |
-| Scala    | 1 / 3 / 109   | 2 / 5 / 129   | 3 / 58 / 394  | 10 / 109 / 587  |
+| Language | 1 VU        | 10 VU       | 50 VU         | 100 VU         |
+| -------- | ----------- | ----------- | ------------- | -------------- |
+| C#       | .3 / 1 / 88 | .6 / 2 / 27 | 2 / 12 / 138  | 6 / 17 / 75    |
+| Deno     | .3 / .8 / 5 | 2 / 4 / 254 | 13 / 16 / 218 | 26 / 33 / 265  |
+| Elixir   | 2 / 6 / 29  | 3 / 13 / 28 | 18 / 57 / 154 | 37 / 121 / 277 |
+| Go       | .3 / 1 / 19 | .6 / 2 / 36 | 3 / 15 / 111  | 6 / 29 / 140   |
+| Rust     | .2 / .6 / 3 | .4 / 1 / 9  | 2 / 4 / 36    | 4 / 9 / 85     |
+| Scala    | 1 / 3 / 109 | 2 / 5 / 129 | 3 / 58 / 394  | 10 / 109 / 587 |
 
 ### Searching the data
 
@@ -256,8 +256,8 @@ might be a bit heavier weight than the other apps. But my understanding is that
 it's mostly just plugs that get compiled in, so it's pretty lightweight in how
 much it actually affects performance vs the minimal possible thing I could do.
 
-The final performance results were distressingly low, an order of magnitude
-worse than Go, Rust, and dotnet.
+The final performance results were unfortunately low, an order of magnitude
+worse than Rust, and a little behind Deno.
 
 ### Go
 
