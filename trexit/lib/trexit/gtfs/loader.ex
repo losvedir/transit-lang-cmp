@@ -2,9 +2,6 @@ defmodule Trexit.GTFS.Loader do
   use GenServer
   require Logger
 
-  alias Trexit.GTFS.StopTime
-  alias Trexit.GTFS.Trip
-
   def start_link(_) do
     GenServer.start_link(__MODULE__, [])
   end
@@ -59,13 +56,7 @@ defmodule Trexit.GTFS.Loader do
 
       :ets.insert(
         :stop_times,
-        {i,
-         %StopTime{
-           trip_id: trip_id,
-           stop_id: stop_id,
-           arrival: arrival_time,
-           departure: departure_time
-         }}
+        {i, trip_id, stop_id, arrival_time, departure_time}
       )
     end)
   end
@@ -87,12 +78,12 @@ defmodule Trexit.GTFS.Loader do
 
       :ets.insert(
         :trips,
-        {i,
-         %Trip{
-           trip_id: trip_id,
-           route_id: route_id,
-           service_id: service_id
-         }}
+        {
+          i,
+          trip_id,
+          route_id,
+          service_id
+        }
       )
     end)
   end
