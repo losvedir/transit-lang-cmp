@@ -46,20 +46,19 @@ func buildTripResponse(
 ) []TripResponse {
 	tripIxs, ok := tripsIxByRoute[route]
 
-	resp := []TripResponse{}
-
 	if ok {
+		resp := make([]TripResponse, 0, len(tripIxs))
 		for tripIx := range tripIxs {
 			trip := trips[tripIx]
 			tripResponse := TripResponse{
 				TripID:    trip.TripID,
 				ServiceID: trip.ServiceID,
 				RouteID:   trip.RouteID,
-				Schedules: []ScheduleResponse{},
 			}
 
 			stopTimeIxs, ok := stopTimesIxByTrip[trip.TripID]
 			if ok {
+				tripResponse.Schedules = make([]ScheduleResponse, 0, len(stopTimeIxs))
 				for stopTimeIx := range stopTimeIxs {
 					stopTime := stopTimes[stopTimeIx]
 					tripResponse.Schedules = append(tripResponse.Schedules, ScheduleResponse{
@@ -68,11 +67,15 @@ func buildTripResponse(
 						Departure: stopTime.Departure,
 					})
 				}
+			} else {
+				tripResponse.Schedules = []ScheduleResponse{}
 			}
 			resp = append(resp, tripResponse)
 		}
+		return resp
+	} else {
+		return []TripResponse{}
 	}
-	return resp
 }
 
 func main() {
