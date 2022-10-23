@@ -3,7 +3,7 @@ using System.Text;
 
 using Sylvan.Data.Csv;
 
-namespace Trannet.Benchmark.TrannetVersions._11_StructFix;
+namespace Trannet.Services;
 
 class GTFS
 {

@@ -27,11 +27,11 @@ class BenchmarkConfig : ManualConfig
 {
     public void AddRuntimes()
     {
-        AddDefaults(AddJob(Job.Default
-            .WithPlatform(Platform.X64)
-            .WithJit(Jit.RyuJit)
-            .WithRuntime(CoreRuntime.Core60)
-            .WithId("Net60")));
+        //AddDefaults(AddJob(Job.Default
+        //    .WithPlatform(Platform.X64)
+        //    .WithJit(Jit.RyuJit)
+        //    .WithRuntime(CoreRuntime.Core60)
+        //    .WithId("Net60")));
 
         AddDefaults(AddJob(Job.Default
             .WithPlatform(Platform.X64)
@@ -62,50 +62,33 @@ class BenchmarkConfig : ManualConfig
 public class LoadTripsBenchmarks
 {
     [Benchmark(Baseline = true)]
-    public void _01_Original()
-    {
-        TrannetVersions._01_Original.GTFS.LoadTrips();
-    }
+    public void _01_Original() => TrannetVersions._01_Original.GTFS.LoadTrips();
+    [Benchmark()] 
+    public void _02_ListAndDictionaryUse() => TrannetVersions._02_ListAndDictionaryUse.GTFS.LoadTrips();
+    [Benchmark()] 
+    public void _03_CacheFriendly() => TrannetVersions._03_CacheFriendly.GTFS.LoadTrips();  
+    [Benchmark()] 
+    public void _04_CsvReader() => TrannetVersions._04_CsvReader.GTFS.LoadTrips();
 
-    [Benchmark()]
-    public void _02_ListAndDictionaryUse()
-    {
-        TrannetVersions._02_ListAndDictionaryUse.GTFS.LoadTrips();
-    }
-
-    [Benchmark()]
-    public void _03_CacheFriendly()
-    {
-        TrannetVersions._03_CacheFriendly.GTFS.LoadTrips();
-    }
 }
 
-[Config(typeof(BenchmarkConfig))]
 [RankColumn, BaselineColumn]
+[Config(typeof(BenchmarkConfig))]
 public class LoadStopTimesBenchmarks
 {
     [Benchmark(Baseline = true)]
-    public void _01_Original()
-    {
-        TrannetVersions._01_Original.GTFS.LoadStopTimes();
-    }
-
+    public void _01_Original() => TrannetVersions._01_Original.GTFS.LoadStopTimes();
+    
     [Benchmark()]
-    public void _02_ListAndDictionaryUse()
-    {
-        TrannetVersions._02_ListAndDictionaryUse.GTFS.LoadStopTimes();
-    }
-
+    public void _02_ListAndDictionaryUse() => TrannetVersions._02_ListAndDictionaryUse.GTFS.LoadStopTimes();
+    
     [Benchmark()]
-    public void _03_CacheFriendly()
-    {
-        TrannetVersions._03_CacheFriendly.GTFS.LoadStopTimes();
-    }
+    public void _03_CacheFriendly() => TrannetVersions._03_CacheFriendly.GTFS.LoadStopTimes(); 
+    [Benchmark()]
+    public void _04_CsvReader() => TrannetVersions._04_CsvReader.GTFS.LoadStopTimes();
+    
 }
 
-[MemoryDiagnoser]
-[MarkdownExporter]
-[MinColumn, MaxColumn, MeanColumn, MedianColumn]
 [Config(typeof(BenchmarkConfig))]
 public class SchedulesForRouteBenchmarks
 {

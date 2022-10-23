@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.2" />
+    <PackageReference Include="Sylvan.Data.Csv" Version="1.2.3" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,15 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "dwXqvTAKziwwpkv8SiXx/X/XPit6nB9OkX1tw1tKL//AYxxfpixzX1pREhU41xWpmLvMfSAR+wwGTEkB0/9OVQ==",
+  "dgSpecHash": "+ji7et497GW3FErz4ITMfi3iUmwxjna/P8RLKLGwQ9GSayoiFkv3t+TH+hm+TH0w20s4ygcqcoITW07YQMhmkA==",
   "success": true,
   "projectFilePath": "D:\\SourceCode\\_PerformanceStuff\\transit-lang-cmp\\Trannet\\Trannet.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\Tedd\\.nuget\\packages\\microsoft.extensions.apidescription.server\\3.0.0\\microsoft.extensions.apidescription.server.3.0.0.nupkg.sha512",
-    "C:\\Users\\Tedd\\.nuget\\packages\\microsoft.openapi\\1.2.3\\microsoft.openapi.1.2.3.nupkg.sha512",
-    "C:\\Users\\Tedd\\.nuget\\packages\\swashbuckle.aspnetcore\\6.2.3\\swashbuckle.aspnetcore.6.2.3.nupkg.sha512",
-    "C:\\Users\\Tedd\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\6.2.3\\swashbuckle.aspnetcore.swagger.6.2.3.nupkg.sha512",
-    "C:\\Users\\Tedd\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\6.2.3\\swashbuckle.aspnetcore.swaggergen.6.2.3.nupkg.sha512",
-    "C:\\Users\\Tedd\\.nuget\\packages\\swashbuckle.aspnetcore.swaggerui\\6.2.3\\swashbuckle.aspnetcore.swaggerui.6.2.3.nupkg.sha512"
+    "C:\\Users\\Tedd\\.nuget\\packages\\sylvan.data.csv\\1.2.3\\sylvan.data.csv.1.2.3.nupkg.sha512"
   ],
   "logs": []
 }
