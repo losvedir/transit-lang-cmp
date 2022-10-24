@@ -22,22 +22,22 @@ defmodule Trexit.GTFS.Loader do
   end
 
   def load() do
-    :ets.new(:stop_times_by_trip, [:named_table, :bag, {:read_concurrency, true}])
-    :ets.new(:trips_by_route, [:named_table, :bag, {:read_concurrency, true}])
+    :ets.new(:stop_times_by_trip, [:named_table, :duplicate_bag, {:read_concurrency, true}])
+    :ets.new(:trips_by_route, [:named_table, :duplicate_bag, {:read_concurrency, true}])
 
     {time, _} =
       :timer.tc(fn ->
         get_stop_times()
       end)
 
-    Logger.info("Parsed stop_times.txt in #{time / 1000} ms")
+    Logger.warning("Parsed stop_times.txt in #{time / 1000} ms")
 
     {time, _} =
       :timer.tc(fn ->
         get_trips()
       end)
 
-    Logger.info("Parsed trips.txt in #{time / 1000} ms")
+    Logger.warning("Parsed trips.txt in #{time / 1000} ms")
   end
 
   defp get_stop_times() do
@@ -49,8 +49,9 @@ defmodule Trexit.GTFS.Loader do
     # assert column order
     ["trip_id", "arrival_time", "departure_time", "stop_id" | _] = header
 
-    objects =
-      Enum.map(rest, fn [trip_id, arrival_time, departure_time, stop_id | _] ->
+    Enum.each(rest, fn [trip_id, arrival_time, departure_time, stop_id | _] ->
+      :ets.insert(
+        :stop_times_by_trip,
         {trip_id,
          %StopTime{
            trip_id: trip_id,
@@ -58,9 +59,8 @@ defmodule Trexit.GTFS.Loader do
            arrival: arrival_time,
            departure: departure_time
          }}
-      end)
-
-    :ets.insert(:stop_times_by_trip, objects)
+      )
+    end)
   end
 
   defp get_trips() do
@@ -72,16 +72,16 @@ defmodule Trexit.GTFS.Loader do
     # assert column order
     ["route_id", "service_id", "trip_id" | _] = header
 
-    objects =
-      Enum.map(rest, fn [route_id, service_id, trip_id | _] ->
+    Enum.each(rest, fn [route_id, service_id, trip_id | _] ->
+      :ets.insert(
+        :trips_by_route,
         {route_id,
          %Trip{
            trip_id: trip_id,
            route_id: route_id,
            service_id: service_id
          }}
-      end)
-
-    :ets.insert(:trips_by_route, objects)
+      )
+    end)
   end
 end
