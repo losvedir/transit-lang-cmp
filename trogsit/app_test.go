@@ -9,7 +9,7 @@ func BenchmarkTripResp(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		for _, route := range routes {
-			buildTripResponse(route, stopTimes, stopTimesIxByTrip, trips, tripsIxByRoute)
+			buildTripResponse(tripsIxByRoute[route], stopTimes, stopTimesIxByTrip, trips)
 		}
 	}
 }

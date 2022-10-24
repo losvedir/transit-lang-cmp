@@ -14,61 +14,45 @@ import (
 )
 
 type StopTime struct {
-	TripID    string
-	StopID    string
-	Arrival   string
-	Departure string
-}
-
-type Trip struct {
-	TripID    string
-	RouteID   string
-	ServiceID string
-}
-
-type TripResponse struct {
-	TripID    string             `json:"trip_id"`
-	ServiceID string             `json:"service_id"`
-	RouteID   string             `json:"route_id"`
-	Schedules []ScheduleResponse `json:"schedules"`
-}
-
-type ScheduleResponse struct {
+	TripID    string `json:"-"`
 	StopID    string `json:"stop_id"`
 	Arrival   string `json:"arrival_time"`
 	Departure string `json:"departure_time"`
 }
 
+type Trip struct {
+	TripID    string `json:"trip_id"`
+	ServiceID string `json:"service_id"`
+	RouteID   string `json:"route_id"`
+}
+
+type TripResponse struct {
+	*Trip
+	Stops []*StopTime `json:"schedules"`
+}
+
 func buildTripResponse(
-	route string,
+	tripIxs []int,
 	stopTimes []*StopTime,
 	stopTimesIxByTrip map[string][]int,
 	trips []*Trip,
-	tripsIxByRoute map[string][]int,
 ) []TripResponse {
-	tripIxs := tripsIxByRoute[route]
-
 	resp := make([]TripResponse, 0, len(tripIxs))
+
 	for _, tripIx := range tripIxs {
 		trip := trips[tripIx]
-		tripResponse := TripResponse{
-			TripID:    trip.TripID,
-			ServiceID: trip.ServiceID,
-			RouteID:   trip.RouteID,
-		}
-
 		stopTimeIxs := stopTimesIxByTrip[trip.TripID]
-		tripResponse.Schedules = make([]ScheduleResponse, 0, len(stopTimeIxs))
-		for _, stopTimeIx := range stopTimeIxs {
-			stopTime := stopTimes[stopTimeIx]
-			tripResponse.Schedules = append(tripResponse.Schedules, ScheduleResponse{
-				StopID:    stopTime.StopID,
-				Arrival:   stopTime.Arrival,
-				Departure: stopTime.Departure,
-			})
+
+		tripResp := TripResponse{
+			Trip:  trip,
+			Stops: make([]*StopTime, 0, len(stopTimeIxs)),
 		}
 
-		resp = append(resp, tripResponse)
+		for _, stopTimeIx := range stopTimeIxs {
+			tripResp.Stops = append(tripResp.Stops, stopTimes[stopTimeIx])
+		}
+
+		resp = append(resp, tripResp)
 	}
 
 	return resp
@@ -80,7 +64,7 @@ func main() {
 
 	http.HandleFunc("/schedules/", func(w http.ResponseWriter, r *http.Request) {
 		route := strings.Split(r.URL.Path, "/")[2]
-		resp := buildTripResponse(route, stopTimes, stopTimesIxByTrip, trips, tripsIxByRoute)
+		resp := buildTripResponse(tripsIxByRoute[route], stopTimes, stopTimesIxByTrip, trips)
 		w.Header().Set("Content-Type", "application/json")
 		json_resp, err := json.Marshal(resp)
 		if err != nil {
