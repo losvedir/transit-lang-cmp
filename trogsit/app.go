@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -39,9 +41,9 @@ type ScheduleResponse struct {
 
 func buildTripResponse(
 	route string,
-	stopTimes []StopTime,
+	stopTimes []*StopTime,
 	stopTimesIxByTrip map[string][]int,
-	trips []Trip,
+	trips []*Trip,
 	tripsIxByRoute map[string][]int,
 ) []TripResponse {
 	tripIxs, ok := tripsIxByRoute[route]
@@ -98,86 +100,101 @@ func main() {
 	log.Fatal(http.ListenAndServe(":4000", nil))
 }
 
-func getStopTimes() ([]StopTime, map[string][]int) {
-	f, err := os.Open("../MBTA_GTFS/stop_times.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+func getStopTimes() ([]*StopTime, map[string][]int) {
+	filename := "../MBTA_GTFS/stop_times.txt"
+	headers := []string{"trip_id", "arrival_time", "departure_time", "stop_id"}
 
-	start := time.Now()
-	r := csv.NewReader(f)
-	records, err := r.ReadAll()
-	if err != nil {
-		panic(err)
-	}
-
-	if records[0][0] != "trip_id" || records[0][3] != "stop_id" || records[0][1] != "arrival_time" || records[0][2] != "departure_time" {
-		fmt.Println("stop_times.txt not in expected format:")
-		for i, cell := range records[0] {
-			fmt.Println(i, cell)
-		}
-		panic(1)
-	}
-
-	stopTimes := make([]StopTime, 0, 1_000_000)
+	stopTimes := make([]*StopTime, 0, 1_000_000)
 	stsByTrip := make(map[string][]int)
-	for i, rec := range records[1:] {
-		trip := rec[0]
+	start := time.Now()
+
+	parseCsvFile(filename, headers, func(records []string, i int) {
+		trip := records[0]
 		sts, ok := stsByTrip[trip]
 		if ok {
 			stsByTrip[trip] = append(sts, i)
 		} else {
 			stsByTrip[trip] = []int{i}
 		}
-		stopTimes = append(stopTimes, StopTime{TripID: trip, StopID: rec[3], Arrival: rec[1], Departure: rec[2]})
-	}
-	end := time.Now()
-	elapsed := end.Sub(start)
+		stopTimes = append(stopTimes, &StopTime{TripID: trip, StopID: records[3], Arrival: records[1], Departure: records[2]})
+	})
 
+	elapsed := time.Since(start)
 	fmt.Println("parsed", len(stopTimes), "stop times in", elapsed)
 
 	return stopTimes, stsByTrip
 }
 
-func getTrips() ([]Trip, map[string][]int) {
-	f, err := os.Open("../MBTA_GTFS/trips.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+func getTrips() ([]*Trip, map[string][]int) {
+	filename := "../MBTA_GTFS/trips.txt"
+	headers := []string{"route_id", "service_id", "trip_id"}
 
-	start := time.Now()
-	r := csv.NewReader(f)
-	records, err := r.ReadAll()
-	if err != nil {
-		panic(err)
-	}
-
-	if records[0][2] != "trip_id" || records[0][0] != "route_id" || records[0][1] != "service_id" {
-		fmt.Println("trips.txt not in expected format:")
-		for i, cell := range records[0] {
-			fmt.Println(i, cell)
-		}
-		panic(1)
-	}
-
-	trips := make([]Trip, 0, 70_000)
+	trips := make([]*Trip, 0, 70_000)
 	tripsByRoute := make(map[string][]int)
-	for i, rec := range records[1:] {
-		route := rec[0]
+	start := time.Now()
+
+	parseCsvFile(filename, headers, func(records []string, i int) {
+		route := records[0]
 		ts, ok := tripsByRoute[route]
 		if ok {
 			tripsByRoute[route] = append(ts, i)
 		} else {
 			tripsByRoute[route] = []int{i}
 		}
-		trips = append(trips, Trip{TripID: rec[2], RouteID: route, ServiceID: rec[1]})
-	}
-	end := time.Now()
-	elapsed := end.Sub(start)
+		trips = append(trips, &Trip{TripID: records[2], RouteID: route, ServiceID: records[1]})
+	})
 
+	elapsed := time.Since(start)
 	fmt.Println("parsed", len(trips), "trips in", elapsed)
 
 	return trips, tripsByRoute
+}
+
+func parseCsvFile(filename string, headers []string, parseRec func([]string, int)) {
+	f, rd := openCsv(filename, headers)
+	defer f.Close()
+
+	var err error
+	i := 0
+
+	for records, err := rd.Read(); err == nil; records, err = rd.Read() {
+		parseRec(records, i)
+		i++
+	}
+
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
+}
+
+func openCsv(filename string, headers []string) (*os.File, *csv.Reader) {
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	rd := csv.NewReader(bufio.NewReader(f))
+	rd.ReuseRecord = true
+
+	records, err := rd.Read()
+	if err != nil {
+		panic(err)
+	}
+
+	if len(records) > len(headers) {
+		records = records[:len(headers)]
+	}
+
+	for i := 0; i < len(records); i++ {
+		if records[i] != headers[i] {
+			fmt.Println(filename, "not in expected format:")
+			for i, cell := range records {
+				fmt.Println(i, cell)
+			}
+
+			panic(1)
+		}
+	}
+
+	return f, rd
 }
