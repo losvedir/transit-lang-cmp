@@ -46,38 +46,32 @@ func buildTripResponse(
 	trips []*Trip,
 	tripsIxByRoute map[string][]int,
 ) []TripResponse {
-	tripIxs, ok := tripsIxByRoute[route]
+	tripIxs := tripsIxByRoute[route]
 
-	if ok {
-		resp := make([]TripResponse, 0, len(tripIxs))
-		for tripIx := range tripIxs {
-			trip := trips[tripIx]
-			tripResponse := TripResponse{
-				TripID:    trip.TripID,
-				ServiceID: trip.ServiceID,
-				RouteID:   trip.RouteID,
-			}
-
-			stopTimeIxs, ok := stopTimesIxByTrip[trip.TripID]
-			if ok {
-				tripResponse.Schedules = make([]ScheduleResponse, 0, len(stopTimeIxs))
-				for stopTimeIx := range stopTimeIxs {
-					stopTime := stopTimes[stopTimeIx]
-					tripResponse.Schedules = append(tripResponse.Schedules, ScheduleResponse{
-						StopID:    stopTime.StopID,
-						Arrival:   stopTime.Arrival,
-						Departure: stopTime.Departure,
-					})
-				}
-			} else {
-				tripResponse.Schedules = []ScheduleResponse{}
-			}
-			resp = append(resp, tripResponse)
+	resp := make([]TripResponse, 0, len(tripIxs))
+	for tripIx := range tripIxs {
+		trip := trips[tripIx]
+		tripResponse := TripResponse{
+			TripID:    trip.TripID,
+			ServiceID: trip.ServiceID,
+			RouteID:   trip.RouteID,
 		}
-		return resp
-	} else {
-		return []TripResponse{}
+
+		stopTimeIxs := stopTimesIxByTrip[trip.TripID]
+		tripResponse.Schedules = make([]ScheduleResponse, 0, len(stopTimeIxs))
+		for stopTimeIx := range stopTimeIxs {
+			stopTime := stopTimes[stopTimeIx]
+			tripResponse.Schedules = append(tripResponse.Schedules, ScheduleResponse{
+				StopID:    stopTime.StopID,
+				Arrival:   stopTime.Arrival,
+				Departure: stopTime.Departure,
+			})
+		}
+
+		resp = append(resp, tripResponse)
 	}
+
+	return resp
 }
 
 func main() {
@@ -110,12 +104,8 @@ func getStopTimes() ([]*StopTime, map[string][]int) {
 
 	parseCsvFile(filename, headers, func(records []string, i int) {
 		trip := records[0]
-		sts, ok := stsByTrip[trip]
-		if ok {
-			stsByTrip[trip] = append(sts, i)
-		} else {
-			stsByTrip[trip] = []int{i}
-		}
+
+		stsByTrip[trip] = append(stsByTrip[trip], i)
 		stopTimes = append(stopTimes, &StopTime{TripID: trip, StopID: records[3], Arrival: records[1], Departure: records[2]})
 	})
 
@@ -135,12 +125,8 @@ func getTrips() ([]*Trip, map[string][]int) {
 
 	parseCsvFile(filename, headers, func(records []string, i int) {
 		route := records[0]
-		ts, ok := tripsByRoute[route]
-		if ok {
-			tripsByRoute[route] = append(ts, i)
-		} else {
-			tripsByRoute[route] = []int{i}
-		}
+
+		tripsByRoute[route] = append(tripsByRoute[route], i)
 		trips = append(trips, &Trip{TripID: records[2], RouteID: route, ServiceID: records[1]})
 	})
 
