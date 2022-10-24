@@ -13,10 +13,8 @@ public static class GTFSService
         (StopTimes, StopTimesIxByTrip) = GTFS.LoadStopTimes();
     }
 
-    public static List<TripResponse> SchedulesForRoute(string route)
+    public static IEnumerable<TripResponse> SchedulesForRoute(string route)
     {
-        var trips = new List<TripResponse>();
-        
         if (TripsIxByRoute.TryGetValue(route, out var tripIxs))
         {
             foreach (int tripIx in tripIxs)
@@ -29,11 +27,9 @@ public static class GTFSService
                     var stopTime = StopTimes[stopTimeIx];
                     schedules.Add(new StopTimeResponse(stopTime.StopID, stopTime.Arrival, stopTime.Departure));
                 }
-                trips.Add(new TripResponse(trip.TripID, trip.RouteID, trip.ServiceID, schedules));
+                yield return new TripResponse(trip.TripID, trip.RouteID, trip.ServiceID, schedules);
             }
         }
-
-        return trips;
     }
 
     internal static void EnsureLoaded()
