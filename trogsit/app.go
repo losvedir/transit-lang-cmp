@@ -57,13 +57,9 @@ func main() {
 		route := strings.Split(r.URL.Path, "/")[2]
 		resp := buildTripResponse(tripsByRoute[route], stopTimesByTrip)
 		w.Header().Set("Content-Type", "application/json")
-		json_resp, err := json.Marshal(resp)
-		if err != nil {
+
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			fmt.Println("json error", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("500 - Something bad happened!"))
-		} else {
-			w.Write(json_resp)
 		}
 	})
 	log.Fatal(http.ListenAndServe(":4000", nil))
