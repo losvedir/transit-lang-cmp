@@ -1,7 +1,4 @@
 defmodule Trexit.GTFS do
-  alias Trexit.GTFS.StopTime
-  alias Trexit.GTFS.Trip
-
   def schedules_for_route(route_id) do
     for %{trip_id: trip_id, service_id: service_id} <-
           lookup_trips_by_route(route_id) do
