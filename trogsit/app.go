@@ -32,24 +32,15 @@ type TripResponse struct {
 }
 
 func buildTripResponse(
-	tripIxs []int,
-	stopTimes []*StopTime,
-	stopTimesIxByTrip map[string][]int,
 	trips []*Trip,
+	stopTimesByTrip map[string][]*StopTime,
 ) []TripResponse {
-	resp := make([]TripResponse, 0, len(tripIxs))
+	resp := make([]TripResponse, 0, len(trips))
 
-	for _, tripIx := range tripIxs {
-		trip := trips[tripIx]
-		stopTimeIxs := stopTimesIxByTrip[trip.TripID]
-
+	for _, trip := range trips {
 		tripResp := TripResponse{
 			Trip:  trip,
-			Stops: make([]*StopTime, 0, len(stopTimeIxs)),
-		}
-
-		for _, stopTimeIx := range stopTimeIxs {
-			tripResp.Stops = append(tripResp.Stops, stopTimes[stopTimeIx])
+			Stops: stopTimesByTrip[trip.TripID],
 		}
 
 		resp = append(resp, tripResp)
@@ -59,12 +50,12 @@ func buildTripResponse(
 }
 
 func main() {
-	stopTimes, stopTimesIxByTrip := getStopTimes()
-	trips, tripsIxByRoute := getTrips()
+	_, stopTimesByTrip := getStopTimes()
+	_, tripsByRoute := getTrips()
 
 	http.HandleFunc("/schedules/", func(w http.ResponseWriter, r *http.Request) {
 		route := strings.Split(r.URL.Path, "/")[2]
-		resp := buildTripResponse(tripsIxByRoute[route], stopTimes, stopTimesIxByTrip, trips)
+		resp := buildTripResponse(tripsByRoute[route], stopTimesByTrip)
 		w.Header().Set("Content-Type", "application/json")
 		json_resp, err := json.Marshal(resp)
 		if err != nil {
@@ -78,19 +69,25 @@ func main() {
 	log.Fatal(http.ListenAndServe(":4000", nil))
 }
 
-func getStopTimes() ([]*StopTime, map[string][]int) {
+func getStopTimes() ([]*StopTime, map[string][]*StopTime) {
 	filename := "../MBTA_GTFS/stop_times.txt"
 	headers := []string{"trip_id", "arrival_time", "departure_time", "stop_id"}
 
 	stopTimes := make([]*StopTime, 0, 1_000_000)
-	stsByTrip := make(map[string][]int)
+	stsByTrip := make(map[string][]*StopTime)
 	start := time.Now()
 
 	parseCsvFile(filename, headers, func(records []string, i int) {
 		trip := records[0]
+		stop := &StopTime{
+			TripID:    trip,
+			StopID:    records[3],
+			Arrival:   records[1],
+			Departure: records[2],
+		}
 
-		stsByTrip[trip] = append(stsByTrip[trip], i)
-		stopTimes = append(stopTimes, &StopTime{TripID: trip, StopID: records[3], Arrival: records[1], Departure: records[2]})
+		stsByTrip[trip] = append(stsByTrip[trip], stop)
+		stopTimes = append(stopTimes, stop)
 	})
 
 	elapsed := time.Since(start)
@@ -99,19 +96,24 @@ func getStopTimes() ([]*StopTime, map[string][]int) {
 	return stopTimes, stsByTrip
 }
 
-func getTrips() ([]*Trip, map[string][]int) {
+func getTrips() ([]*Trip, map[string][]*Trip) {
 	filename := "../MBTA_GTFS/trips.txt"
 	headers := []string{"route_id", "service_id", "trip_id"}
 
 	trips := make([]*Trip, 0, 70_000)
-	tripsByRoute := make(map[string][]int)
+	tripsByRoute := make(map[string][]*Trip)
 	start := time.Now()
 
 	parseCsvFile(filename, headers, func(records []string, i int) {
 		route := records[0]
+		trip := &Trip{
+			TripID:    records[2],
+			RouteID:   route,
+			ServiceID: records[1],
+		}
 
-		tripsByRoute[route] = append(tripsByRoute[route], i)
-		trips = append(trips, &Trip{TripID: records[2], RouteID: route, ServiceID: records[1]})
+		tripsByRoute[route] = append(tripsByRoute[route], trip)
+		trips = append(trips, trip)
 	})
 
 	elapsed := time.Since(start)

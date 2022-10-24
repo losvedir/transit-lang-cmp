@@ -3,13 +3,13 @@ package main
 import "testing"
 
 func BenchmarkTripResp(b *testing.B) {
-	stopTimes, stopTimesIxByTrip := getStopTimes()
-	trips, tripsIxByRoute := getTrips()
+	_, stopTimesByTrip := getStopTimes()
+	_, tripsIxByRoute := getTrips()
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
 		for _, route := range routes {
-			buildTripResponse(tripsIxByRoute[route], stopTimes, stopTimesIxByTrip, trips)
+			buildTripResponse(tripsIxByRoute[route], stopTimesByTrip)
 		}
 	}
 }
