@@ -2,7 +2,8 @@ package gtfs_data
 
 import scala.io.Source
 import scala.collection.mutable.ArrayBuffer
-import upickle.default.{ReadWriter => RW, macroRW}
+import scala.collection.mutable.Map
+import scala.util.Using
 
 case class Trip(tripID: String, routeID: String, serviceID: String)
 case class StopTime(
@@ -18,91 +19,89 @@ case class TripResponse(
     service_id: String,
     schedules: ArrayBuffer[ScheduleResponse]
 )
-object TripResponse {
-  implicit val rw: RW[TripResponse] = macroRW
-}
+
 case class ScheduleResponse(
     stop_id: String,
     arrival_time: String,
     departure_time: String
 )
-object ScheduleResponse {
-  implicit val rw: RW[ScheduleResponse] = macroRW
-}
 
-object GTFSData {
+object GTFSData:
   val (trips, tripsIxByRoute) = getTrips
   val (stopTimes, stopTimesIxByTrip) = getStopTimes
 
   def schedulesForRoute(route: String): ArrayBuffer[TripResponse] =
     var tripResponses = ArrayBuffer[TripResponse]()
-    if tripsIxByRoute.contains(route) then
-      for tripIx <- tripsIxByRoute(route) do
-        val trip = trips(tripIx)
-        var schedules = ArrayBuffer[ScheduleResponse]()
-        if stopTimesIxByTrip.contains(trip.tripID) then
-          for stopTimeIx <- stopTimesIxByTrip(trip.tripID) do
-            val stopTime = stopTimes(stopTimeIx)
-            schedules.addOne(
-              ScheduleResponse(
-                stopTime.stopID,
-                stopTime.arrival,
-                stopTime.departure
-              )
-            )
-          tripResponses.addOne(
-            TripResponse(trip.tripID, trip.routeID, trip.serviceID, schedules)
-          )
-
+    for
+      tripIxs <- tripsIxByRoute.get(route)
+      tripIx <- tripIxs
+    do
+      val trip = trips(tripIx)
+      var schedules = ArrayBuffer[ScheduleResponse]()
+      for
+        stopTimeIxs <- stopTimesIxByTrip.get(trip.tripID)
+        stopTimeIx <- stopTimeIxs
+      do
+        val stopTime = stopTimes(stopTimeIx)
+        schedules += ScheduleResponse(
+          stopTime.stopID,
+          stopTime.arrival,
+          stopTime.departure
+        )
+      tripResponses += TripResponse(
+        trip.tripID,
+        trip.routeID,
+        trip.serviceID,
+        schedules
+      )
     tripResponses
 
   def getTrips: (ArrayBuffer[Trip], Map[String, ArrayBuffer[Int]]) =
-    val lines = Source.fromFile("../MBTA_GTFS/trips.txt").getLines()
-    val header = lines.next().split(",")
-    assert(header.length > 3)
-    assert(header(0) == "route_id")
-    assert(header(1) == "service_id")
-    assert(header(2) == "trip_id")
+    Using.resource(Source.fromFile("../MBTA_GTFS/trips.txt")) { source =>
+      val lines = source.getLines()
+      val header = lines.next().split(",", 4)
+      assert(header.length > 3)
+      assert(header(0) == "route_id")
+      assert(header(1) == "service_id")
+      assert(header(2) == "trip_id")
 
-    var trips: ArrayBuffer[Trip] = ArrayBuffer()
-    var tripsIxByRoute: Map[String, ArrayBuffer[Int]] = Map()
+      val trips = ArrayBuffer.empty[Trip]
+      val tripsIxByRoute = Map.empty[String, ArrayBuffer[Int]]
 
-    for (line, i) <- lines.zipWithIndex do
-      val cells = line.split(",")
-      val route = cells(0)
-      trips.addOne(Trip(cells(2), route, cells(1)))
-      tripsIxByRoute = if tripsIxByRoute.contains(route) then
-        tripsIxByRoute(route).addOne(i)
-        tripsIxByRoute
-      else tripsIxByRoute + (route -> ArrayBuffer[Int](i))
+      for (line, i) <- lines.zipWithIndex do
+        val cells = line.split(",", 4)
+        val route = cells(0)
+        trips += Trip(cells(2), route, cells(1))
+        tripsIxByRoute.getOrElseUpdate(route, ArrayBuffer.empty) += i
 
-    (trips, tripsIxByRoute)
+      (trips, tripsIxByRoute)
+    }
 
   def getStopTimes: (ArrayBuffer[StopTime], Map[String, ArrayBuffer[Int]]) =
     val timingStart = System.nanoTime()
-    val lines = Source.fromFile("../MBTA_GTFS/stop_times.txt").getLines()
-    val header = lines.next().split(",")
-    assert(header.length > 4)
-    assert(header(0) == "trip_id")
-    assert(header(1) == "arrival_time")
-    assert(header(2) == "departure_time")
-    assert(header(3) == "stop_id")
+    val result =
+      Using.resource(Source.fromFile("../MBTA_GTFS/stop_times.txt")) { source =>
+        val lines = source.getLines()
+        val header = lines.next().split(",", 5)
+        assert(header.length > 4)
+        assert(header(0) == "trip_id")
+        assert(header(1) == "arrival_time")
+        assert(header(2) == "departure_time")
+        assert(header(3) == "stop_id")
 
-    var stopTimes = ArrayBuffer[StopTime]()
-    var stopTimesIxByTrip = Map[String, ArrayBuffer[Int]]()
-    for (line, i) <- lines.zipWithIndex do
-      val cells = line.split(",")
-      val trip = cells(0)
-      stopTimes.addOne(StopTime(trip, cells(3), cells(1), cells(2)))
-      stopTimesIxByTrip = if stopTimesIxByTrip.contains(trip) then
-        stopTimesIxByTrip(trip).addOne(i)
-        stopTimesIxByTrip
-      else stopTimesIxByTrip + (trip -> ArrayBuffer[Int](i))
+        val stopTimes = ArrayBuffer.empty[StopTime]
+        val stopTimesIxByTrip = Map.empty[String, ArrayBuffer[Int]]
 
+        for (line, i) <- lines.zipWithIndex do
+          val cells = line.split(",", 5)
+          val trip = cells(0)
+          stopTimes += StopTime(trip, cells(3), cells(1), cells(2))
+          stopTimesIxByTrip.getOrElseUpdate(trip, ArrayBuffer.empty) += i
+
+        (stopTimes, stopTimesIxByTrip)
+      }
     val timingEnd = System.nanoTime()
     println(
       f"Loaded stop_times.txt in ${(timingEnd - timingStart) / 1000000} ms"
     )
-    (stopTimes, stopTimesIxByTrip)
-
-}
+    result
