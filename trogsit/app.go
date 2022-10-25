@@ -31,10 +31,7 @@ type TripResponse struct {
 	Stops []*StopTime `json:"schedules"`
 }
 
-func buildTripResponse(
-	trips []*Trip,
-	stopTimesByTrip map[string][]*StopTime,
-) []TripResponse {
+func buildTripResponse(trips []*Trip, stopTimesByTrip map[string][]*StopTime) []TripResponse {
 	resp := make([]TripResponse, 0, len(trips))
 
 	for _, trip := range trips {
@@ -68,23 +65,25 @@ func main() {
 func getStopTimes() ([]*StopTime, map[string][]*StopTime) {
 	filename := "../MBTA_GTFS/stop_times.txt"
 	headers := []string{"trip_id", "arrival_time", "departure_time", "stop_id"}
-
-	stopTimes := make([]*StopTime, 0, 1_000_000)
-	stsByTrip := make(map[string][]*StopTime)
 	start := time.Now()
 
-	parseCsvFile(filename, headers, func(records []string, i int) {
-		trip := records[0]
+	stopTimes := make([]*StopTime, 0)
+	stsByTrip := make(map[string][]*StopTime)
+
+	err := parseCsvFile(filename, headers, func(records []string, i int) {
 		stop := &StopTime{
-			TripID:    trip,
+			TripID:    records[0],
 			StopID:    records[3],
 			Arrival:   records[1],
 			Departure: records[2],
 		}
 
-		stsByTrip[trip] = append(stsByTrip[trip], stop)
+		stsByTrip[stop.TripID] = append(stsByTrip[stop.TripID], stop)
 		stopTimes = append(stopTimes, stop)
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	elapsed := time.Since(start)
 	fmt.Println("parsed", len(stopTimes), "stop times in", elapsed)
@@ -95,22 +94,24 @@ func getStopTimes() ([]*StopTime, map[string][]*StopTime) {
 func getTrips() ([]*Trip, map[string][]*Trip) {
 	filename := "../MBTA_GTFS/trips.txt"
 	headers := []string{"route_id", "service_id", "trip_id"}
-
-	trips := make([]*Trip, 0, 70_000)
-	tripsByRoute := make(map[string][]*Trip)
 	start := time.Now()
 
-	parseCsvFile(filename, headers, func(records []string, i int) {
-		route := records[0]
+	trips := make([]*Trip, 0)
+	tripsByRoute := make(map[string][]*Trip)
+
+	err := parseCsvFile(filename, headers, func(records []string, i int) {
 		trip := &Trip{
 			TripID:    records[2],
-			RouteID:   route,
+			RouteID:   records[0],
 			ServiceID: records[1],
 		}
 
-		tripsByRoute[route] = append(tripsByRoute[route], trip)
+		tripsByRoute[trip.RouteID] = append(tripsByRoute[trip.RouteID], trip)
 		trips = append(trips, trip)
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	elapsed := time.Since(start)
 	fmt.Println("parsed", len(trips), "trips in", elapsed)
@@ -118,27 +119,30 @@ func getTrips() ([]*Trip, map[string][]*Trip) {
 	return trips, tripsByRoute
 }
 
-func parseCsvFile(filename string, headers []string, parseRec func([]string, int)) {
-	f, rd := openCsv(filename, headers)
+func parseCsvFile(filename string, headers []string, parseRec func([]string, int)) error {
+	f, rd, err := openCsv(filename, headers)
+	if err != nil {
+		return err
+	}
 	defer f.Close()
 
-	var err error
-	i := 0
-
-	for records, err := rd.Read(); err == nil; records, err = rd.Read() {
+	i, records := 0, []string(nil)
+	for records, err = rd.Read(); err == nil; records, err = rd.Read() {
 		parseRec(records, i)
 		i++
 	}
 
-	if err != nil && err != io.EOF {
-		panic(err)
+	if err == io.EOF {
+		err = nil
 	}
+
+	return err
 }
 
-func openCsv(filename string, headers []string) (*os.File, *csv.Reader) {
+func openCsv(filename string, headers []string) (*os.File, *csv.Reader, error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	rd := csv.NewReader(bufio.NewReader(f))
@@ -146,23 +150,18 @@ func openCsv(filename string, headers []string) (*os.File, *csv.Reader) {
 
 	records, err := rd.Read()
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
-	if len(records) > len(headers) {
-		records = records[:len(headers)]
+	if len(records) < len(headers) {
+		return nil, nil, fmt.Errorf("more headers provided than in file %#v", records)
 	}
 
-	for i := 0; i < len(records); i++ {
+	for i := 0; i < len(headers); i++ {
 		if records[i] != headers[i] {
-			fmt.Println(filename, "not in expected format:")
-			for i, cell := range records {
-				fmt.Println(i, cell)
-			}
-
-			panic(1)
+			return nil, nil, fmt.Errorf("%v not in expected format, file headers: %#v", filename, records)
 		}
 	}
 
-	return f, rd
+	return f, rd, nil
 }
