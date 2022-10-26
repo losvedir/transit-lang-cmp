@@ -7,7 +7,7 @@ Coincidently, the original rust and C# implementations had the exact same number
 Here is a comparison of the rust (trustit), original C# (trannet) and the minimal (TranNetMin) implementations, running on my machine, which Windows 10 running on an Intel I7-7700K. I included TranNetMin running on .NET 6, and .NET 7 rc2. Your results will certainly vary.
 
 |Implementation|LOC|CSV Load (ms)|Req/s|
-|-|-|-|
+| - | - | - | - |
 |Trustit|213|987|844|
 |Trannet|213|1457|649|
 |TranNetMin 6.0|90|498|838|
