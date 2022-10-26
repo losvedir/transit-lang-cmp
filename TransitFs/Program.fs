@@ -77,7 +77,7 @@ webHost [||] {
     use_if FalcoExtensions.IsDevelopment DeveloperExceptionPageExtensions.UseDeveloperExceptionPage
 
     endpoints [
-        get "/{id}" <| fun ctx ->
+        get "/schedules/{id}" <| fun ctx ->
             let url = Request.getRoute ctx
             let routeId = url.GetString "id" "<empty>"
             match tripsIxByRoute.TryGetValue routeId with
