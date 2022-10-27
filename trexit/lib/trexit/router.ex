@@ -19,7 +19,7 @@ defmodule Trexit.Router do
   get "/schedules/:route" do
     payload =
       route
-      |> Trexit.GTFS.schedules_for_route()
+      |> Trexit.schedules_for_route()
       |> Jsonrs.encode!(lean: true)
 
     conn

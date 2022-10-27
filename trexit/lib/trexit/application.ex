@@ -7,8 +7,9 @@ defmodule Trexit.Application do
 
   @impl true
   def start(_type, _args) do
+    Trexit.load()
+
     children = [
-      Trexit.GTFS.Loader,
       {Plug.Cowboy, scheme: :http, plug: Trexit.Router, options: [port: 4000]}
     ]
 
@@ -16,5 +17,10 @@ defmodule Trexit.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Trexit.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  @impl true
+  def stop(_state) do
+    Trexit.unload()
   end
 end
