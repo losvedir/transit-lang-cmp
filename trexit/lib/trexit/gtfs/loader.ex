@@ -43,23 +43,26 @@ defmodule Trexit.GTFS.Loader do
   end
 
   defp get_stop_times() do
-    [header | rest] =
+    stream =
       "../MBTA_GTFS/stop_times.txt"
-      |> File.read!()
-      |> NimbleCSV.RFC4180.parse_string(skip_headers: false)
+      |> File.stream!()
+      |> NimbleCSV.RFC4180.parse_stream(skip_headers: false)
 
     # assert column order
-    ["trip_id", "arrival_time", "departure_time", "stop_id" | _] = header
+    ["trip_id", "arrival_time", "departure_time", "stop_id"] ++ _ = Enum.fetch!(stream, 0)
 
-    Enum.with_index(rest, fn [trip_id, arrival_time, departure_time, stop_id | _], i ->
+    stream
+    |> Stream.drop(1)
+    |> Stream.with_index()
+    |> Enum.each(fn {[trip_id, arrival_time, departure_time, stop_id] ++ _, index} ->
       case :ets.lookup(:stop_times_ix_by_trip, trip_id) do
-        [] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [i]})
-        [{_, sts}] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [i | sts]})
+        [] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [index]})
+        [{_, sts}] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [index | sts]})
       end
 
       :ets.insert(
         :stop_times,
-        {i,
+        {index,
          %StopTime{
            trip_id: trip_id,
            stop_id: stop_id,
@@ -71,23 +74,26 @@ defmodule Trexit.GTFS.Loader do
   end
 
   defp get_trips() do
-    [header | rest] =
+    stream =
       "../MBTA_GTFS/trips.txt"
-      |> File.read!()
-      |> NimbleCSV.RFC4180.parse_string(skip_headers: false)
+      |> File.stream!()
+      |> NimbleCSV.RFC4180.parse_stream(skip_headers: false)
 
     # assert column order
-    ["route_id", "service_id", "trip_id" | _] = header
+    ["route_id", "service_id", "trip_id"] ++ _ = Enum.fetch!(stream, 0)
 
-    Enum.with_index(rest, fn [route_id, service_id, trip_id | _], i ->
+    stream
+    |> Stream.drop(1)
+    |> Stream.with_index()
+    |> Enum.each(fn {[route_id, service_id, trip_id] ++ _, index} ->
       case :ets.lookup(:trips_ix_by_route, route_id) do
-        [] -> :ets.insert(:trips_ix_by_route, {route_id, [i]})
-        [{_, trips}] -> :ets.insert(:trips_ix_by_route, {route_id, [i | trips]})
+        [] -> :ets.insert(:trips_ix_by_route, {route_id, [index]})
+        [{_, trips}] -> :ets.insert(:trips_ix_by_route, {route_id, [index | trips]})
       end
 
       :ets.insert(
         :trips,
-        {i,
+        {index,
          %Trip{
            trip_id: trip_id,
            route_id: route_id,
