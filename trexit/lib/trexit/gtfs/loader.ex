@@ -1,9 +1,7 @@
 defmodule Trexit.GTFS.Loader do
   use GenServer
-  require Logger
 
-  alias Trexit.GTFS.StopTime
-  alias Trexit.GTFS.Trip
+  require Logger
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, [])
@@ -22,10 +20,8 @@ defmodule Trexit.GTFS.Loader do
   end
 
   def load() do
-    :ets.new(:stop_times, [:named_table, {:read_concurrency, true}])
-    :ets.new(:stop_times_ix_by_trip, [:named_table, {:read_concurrency, true}])
-    :ets.new(:trips, [:named_table, {:read_concurrency, true}])
-    :ets.new(:trips_ix_by_route, [:named_table, {:read_concurrency, true}])
+    :ets.new(:stop_times, [:named_table, :duplicate_bag, read_concurrency: true])
+    :ets.new(:trips, [:named_table, :duplicate_bag, read_concurrency: true])
 
     {time, _} =
       :timer.tc(fn ->
@@ -53,22 +49,10 @@ defmodule Trexit.GTFS.Loader do
 
     stream
     |> Stream.drop(1)
-    |> Stream.with_index()
-    |> Enum.each(fn {[trip_id, arrival_time, departure_time, stop_id] ++ _, index} ->
-      case :ets.lookup(:stop_times_ix_by_trip, trip_id) do
-        [] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [index]})
-        [{_, sts}] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [index | sts]})
-      end
-
+    |> Enum.each(fn [trip_id, arrival_time, departure_time, stop_id] ++ _ ->
       :ets.insert(
         :stop_times,
-        {index,
-         %StopTime{
-           trip_id: trip_id,
-           stop_id: stop_id,
-           arrival: arrival_time,
-           departure: departure_time
-         }}
+        {trip_id, %{arrival_time: arrival_time, departure_time: departure_time, stop_id: stop_id}}
       )
     end)
   end
@@ -84,22 +68,8 @@ defmodule Trexit.GTFS.Loader do
 
     stream
     |> Stream.drop(1)
-    |> Stream.with_index()
-    |> Enum.each(fn {[route_id, service_id, trip_id] ++ _, index} ->
-      case :ets.lookup(:trips_ix_by_route, route_id) do
-        [] -> :ets.insert(:trips_ix_by_route, {route_id, [index]})
-        [{_, trips}] -> :ets.insert(:trips_ix_by_route, {route_id, [index | trips]})
-      end
-
-      :ets.insert(
-        :trips,
-        {index,
-         %Trip{
-           trip_id: trip_id,
-           route_id: route_id,
-           service_id: service_id
-         }}
-      )
+    |> Enum.each(fn [route_id, service_id, trip_id] ++ _ ->
+      :ets.insert(:trips, {route_id, %{service_id: service_id, trip_id: trip_id}})
     end)
   end
 end
