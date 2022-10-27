@@ -7,9 +7,9 @@ open System.Text.Json.Serialization
 let dataDir = "../MBTA_GTFS"
 
 type Trip = {
-    tripId: string
-    routeId: string
-    serviceId: string
+    trip_id: string
+    route_id: string
+    service_id: string
 }
 
 type StopTime = {
@@ -27,12 +27,12 @@ let loadTrips () =
 
     while csv.Read() do
         let routeId = csv.GetString(0)
-        trips.Add({ routeId=routeId; serviceId=csv.GetString(1); tripId=csv.GetString(2) })
+        trips.Add({ route_id=routeId; service_id=csv.GetString(1); trip_id=csv.GetString(2) })
         match tripsIxByRoute.TryGetValue routeId with
-        | true, list -> list.Add(trips.Count - 1);
+        | true, list -> list.Add(trips.Count - 1)
         | false, _ ->
             let list = ResizeArray()
-            list.Add(trips.Count-1)
+            list.Add(trips.Count - 1)
             tripsIxByRoute.Add(routeId, list)
 
     trips, tripsIxByRoute
@@ -46,7 +46,6 @@ let loadStopTimes () =
     while csv.Read() do
         let tripID = csv.GetString(0)
         stopTimes.Add({ tripId=tripID; arrival_id=csv.GetString(1); departure_id=csv.GetString(2); stop_id=csv.GetString(3) })
-
         match stopTimesIxByTrip.TryGetValue(tripID) with
         | true, list -> list.Add(stopTimes.Count - 1)
         | false, _ ->
@@ -85,13 +84,9 @@ webHost [||] {
                 ctx |> Response.ofJson (seq {
                     for tripIx in tripIxs ->
                         let trip = trips[tripIx]
-                        let stopTimeIxs = stopTimesIxByTrip[trip.tripId]
-                        {|
-                            trip_id = trip.tripId
-                            route_id = trip.routeId
-                            service_id = trip.serviceId
+                        let stopTimeIxs = stopTimesIxByTrip[trip.trip_id]
+                        {| trip with
                             schedules = seq { for stopTimeIx in stopTimeIxs -> stopTimes[stopTimeIx] }
-                            //schedules = Array.init stopTimeIxs.Count (fun i -> stopTimes[stopTimeIxs[i]])
                         |}
                 })
             | false, _ ->
