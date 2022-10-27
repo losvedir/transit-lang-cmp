@@ -1,5 +1,5 @@
 Run with
 
 ```
-> env MIX_ENV=prod SECRET_KEY_BASE="somerandomthingdoesntmatter" mix phx.server
+> env MIX_ENV=prod mix run --preload-modules --no-halt
 ```

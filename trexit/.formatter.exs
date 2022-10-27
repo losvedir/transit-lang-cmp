@@ -1,4 +1,4 @@
 [
-  import_deps: [:phoenix],
+  import_deps: [:plug],
   inputs: ["*.{ex,exs}", "{config,lib,test}/**/*.{ex,exs}"]
 ]
