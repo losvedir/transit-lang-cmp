@@ -21,9 +21,8 @@ var (StopTimes, StopTimesIxByTrip) = LoadStopTimes();
 app.MapGet("/schedules/{routeId}", (string routeId) =>
     {
         var trips = new List<TripResponse>();
-        if (TripsIxByRoute.ContainsKey(routeId))
+        if (TripsIxByRoute.TryGetValue(routeId, out var tripIxs))
         {
-            var tripIxs = TripsIxByRoute[routeId];
             trips.Capacity = tripIxs.Count;
             foreach (var tripIx in tripIxs)
             {
