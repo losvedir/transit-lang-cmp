@@ -21,25 +21,20 @@ var (StopTimes, StopTimesIxByTrip) = LoadStopTimes();
 app.MapGet("/schedules/{routeId}", (string routeId) =>
     {
         var trips = new List<TripResponse>();
-        if (TripsIxByRoute.TryGetValue(routeId, out var tripIxs))
+        if (!TripsIxByRoute.TryGetValue(routeId, out var tripIxs)) return trips;
+
+        trips.Capacity = tripIxs.Count;
+        foreach (var tripIx in tripIxs)
         {
-            trips.Capacity = tripIxs.Count;
-            foreach (var tripIx in tripIxs)
+            var trip = Trips[tripIx];
+            var stopTimeIxs = StopTimesIxByTrip[trip.TripID];
+            var schedules = new List<StopTimeResponse>(stopTimeIxs.Count);
+            foreach (var stopTimeIx in stopTimeIxs)
             {
-                var trip = Trips[tripIx];
-                var stopTimeIxs = StopTimesIxByTrip[trip.TripID];
-                var schedules = new List<StopTimeResponse>(stopTimeIxs.Count);
-                foreach (var stopTimeIx in stopTimeIxs)
-                {
-                    var stopTime = StopTimes[stopTimeIx];
-                    schedules.Add(new StopTimeResponse(stopTime.StopID, stopTime.Arrival, stopTime.Departure));
-                }
-                trips.Add(new TripResponse(trip.TripID, trip.RouteID, trip.ServiceID, schedules));
+                var stopTime = StopTimes[stopTimeIx];
+                schedules.Add(new StopTimeResponse(stopTime.StopID, stopTime.Arrival, stopTime.Departure));
             }
-        }
-        else
-        {
-            trips = new List<TripResponse>();
+            trips.Add(new TripResponse(trip.TripID, trip.RouteID, trip.ServiceID, schedules));
         }
         return trips;
     }
@@ -68,9 +63,9 @@ static (List<Trip>, Dictionary<string, List<int>>) LoadTrips()
         if (!tripsIxByRoute.TryGetValue(routeID, out var tripsIx))
         {
             tripsIx = new List<int>();
-            tripsIxByRoute.Add(routeID,tripsIx );
+            tripsIxByRoute.Add(routeID, tripsIx);
         }        
-        tripsIx .Add(i);
+        tripsIx.Add(i);
 
         i++;
     }
