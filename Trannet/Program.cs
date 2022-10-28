@@ -65,14 +65,12 @@ static (List<Trip>, Dictionary<string, List<int>>) LoadTrips()
         string routeID = csvReader.GetString(0);
         trips.Add(new Trip(csvReader.GetString(2), routeID, csvReader.GetString(1)));
 
-        if (tripsIxByRoute.ContainsKey(routeID))
+        if (!tripsIxByRoute.TryGetValue(routeID, out var tripsIx))
         {
-            tripsIxByRoute[routeID].Add(i);
-        }
-        else
-        {
-            tripsIxByRoute.Add(routeID, new List<int> { i });
-        }
+            tripsIx = new List<int>();
+            tripsIxByRoute.Add(routeID,tripsIx );
+        }        
+        tripsIx .Add(i);
 
         i++;
     }
