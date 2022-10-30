@@ -38,7 +38,6 @@ config :esbuild,
 
 # Configures Elixir's Logger
 config :logger, :console,
-  level: :warn,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
