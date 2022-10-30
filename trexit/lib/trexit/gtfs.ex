@@ -1,35 +1,44 @@
 defmodule Trexit.GTFS do
-  alias Trexit.GTFS.StopTime
-  alias Trexit.GTFS.Trip
+  @compile :inline_list_funcs
 
   def schedules_for_route(route_id) do
-    case :ets.lookup(:trips_ix_by_route, route_id) do
-      [{^route_id, trip_ixs}] ->
-        Enum.map(trip_ixs, fn trip_ix ->
-          [{^trip_ix, %Trip{trip_id: trip_id, route_id: ^route_id, service_id: service_id}}] =
-            :ets.lookup(:trips, trip_ix)
+    :lists.map(
+      fn %{trip_id: trip_id, service_id: service_id} ->
+        %{
+          trip_id: trip_id,
+          service_id: service_id,
+          route_id: route_id,
+          schedules: schedules_for_trip(trip_id)
+        }
+      end,
+      lookup_trips_by_route(route_id)
+    )
+  end
 
-          [{^trip_id, st_ixs}] = :ets.lookup(:stop_times_ix_by_trip, trip_id)
+  defp schedules_for_trip(trip_id) do
+    :lists.map(
+      fn %{
+           stop_id: stop_id,
+           arrival: arrival,
+           departure: departure
+         } ->
+        %{
+          stop_id: stop_id,
+          arrival_time: arrival,
+          departure_time: departure
+        }
+      end,
+      lookup_stop_times_by_trip(trip_id)
+    )
+  end
 
-          %{
-            "trip_id" => trip_id,
-            "service_id" => service_id,
-            "route_id" => route_id,
-            "schedules" =>
-              Enum.map(st_ixs, fn st_ix ->
-                [{^st_ix, %StopTime{} = stop_time}] = :ets.lookup(:stop_times, st_ix)
+  defp lookup_trips_by_route(route_id) do
+    :persistent_term.get({Trexit.GTFS, :trips_by_route})
+    |> Map.get(route_id, [])
+  end
 
-                %{
-                  "stop_id" => stop_time.stop_id,
-                  "arrival_time" => stop_time.arrival,
-                  "departure_time" => stop_time.departure
-                }
-              end)
-          }
-        end)
-
-      _ ->
-        []
-    end
+  defp lookup_stop_times_by_trip(trip_id) do
+    :persistent_term.get({Trexit.GTFS, :stop_times_by_trip})
+    |> Map.get(trip_id, [])
   end
 end
