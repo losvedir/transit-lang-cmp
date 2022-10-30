@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Linq;
 
-namespace Trannet.Services;
+namespace Trannet.Benchmark.TrannetVersions._11_StructFix;
 
 public static class GTFSService
 {

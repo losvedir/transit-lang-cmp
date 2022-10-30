@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.2" />
+    <PackageReference Include="Sylvan.Data.Csv" Version="1.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+	  <EmbeddedResource Include="..\MBTA_GTFS\**\*" LinkBase="MBTA_GTFS">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		  <Visible>True</Visible>
+	  </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
