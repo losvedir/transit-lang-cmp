@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+    <PackageReference Include="Sylvan.Data.Csv" Version="1.2.4" />
   </ItemGroup>
 
 </Project>
