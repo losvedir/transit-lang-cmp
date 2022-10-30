@@ -46,6 +46,14 @@ load the GTFS `stop_times.txt` file into an in-memory structure (together with a
 hashmap "index" to access it more efficiently). The second is the requests per
 second that the webservers can field, as measured using the k6 tool.
 
+I'm running this on my personal laptop, from Apple -> About this Mac:
+
+```
+MacBook Pro (14-inch, 2021)
+Chip: Apple M1 Pro
+Memory: 32 GB
+```
+
 ### Loading stop_times.txt
 
 This is the time it takes for the app to load the stop_times.txt file, which is
