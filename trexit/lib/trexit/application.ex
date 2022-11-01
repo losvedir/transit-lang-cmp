@@ -7,16 +7,10 @@ defmodule Trexit.Application do
 
   @impl true
   def start(_type, _args) do
+    Trexit.load()
+
     children = [
-      # Start the Telemetry supervisor
-      TrexitWeb.Telemetry,
-      # Start the PubSub system
-      {Phoenix.PubSub, name: Trexit.PubSub},
-      Trexit.GTFS.Loader,
-      # Start the Endpoint (http/https)
-      TrexitWeb.Endpoint
-      # Start a worker by calling: Trexit.Worker.start_link(arg)
-      # {Trexit.Worker, arg}
+      {Plug.Cowboy, scheme: :http, plug: Trexit.Router, options: [port: 4000]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -25,11 +19,8 @@ defmodule Trexit.Application do
     Supervisor.start_link(children, opts)
   end
 
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
   @impl true
-  def config_change(changed, _new, removed) do
-    TrexitWeb.Endpoint.config_change(changed, removed)
-    :ok
+  def stop(_state) do
+    Trexit.unload()
   end
 end
