@@ -3,6 +3,7 @@ program trascal;
 {$mode objfpc}{$H+}
 
 uses
+  cthreads,
   Classes,
   SysUtils,
   DateUtils,
@@ -56,14 +57,14 @@ type
     FServiceID: string;
     FRouteID  : string;
     FSchedules: TCollection;
-  public
-    constructor Create(const ATripID,AServiceID,ARouteID: String);
   published
     // for reading from JSON, must have exact same casing as the JSON keys
     property trip_id: string read FTripID write FTripID;
     property service_id: string read FServiceID write FServiceID;
     property route_id: string read FRouteID write FRouteID;
     property schedules: TCollection read FSchedules write FSchedules;
+  public
+    constructor Create(const ATripID,AServiceID,ARouteID: String);
     // convenient Pascal style aliases
     property TripID: string read FTripID write FTripID;
     property ServiceID: string read FServiceID write FServiceID;
@@ -76,13 +77,13 @@ type
     FStopID   : string;
     FArrival  : string;
     FDeparture: string;
-  public
-    constructor Create(const AStopID,AArrival,ADeparture: String);
   published
     // for reading from JSON, must have exact same casing as the JSON keys
     property stop_id: string read FStopID write FStopID;
     property arrival_time: string read FArrival write FArrival;
     property departure_time: string read FDeparture write FDeparture;
+  public
+    constructor Create(const AStopID,AArrival,ADeparture: String);
     // convenient Pascal style aliases
     property StopID: string read FStopID write FStopID;
     property Arrival: string read FArrival write FArrival;
@@ -199,9 +200,9 @@ begin
   LCSV := TCSVDocument.Create;
   try
     LCSV.Delimiter := ',';
-    LCSV.LoadFromFile('../MBTA_GTFS/stop_times.txt');
-
     LStart := Now;
+
+    LCSV.LoadFromFile('../MBTA_GTFS/stop_times.txt');
 
     if (LCSV.Cells[0, 0] <> 'trip_id') or (LCSV.Cells[3, 0] <> 'stop_id') or (LCSV.Cells[1, 0] <> 'arrival_time') or (LCSV.Cells[2, 0] <> 'departure_time') then begin
       WriteLn('stop_times.txt not in expected format:');
@@ -243,9 +244,10 @@ begin
   LCSV := TCSVDocument.Create;
   try
     LCSV.Delimiter := ',';
-    LCSV.LoadFromFile('../MBTA_GTFS/trips.txt');
 
     LStart := Now;
+
+    LCSV.LoadFromFile('../MBTA_GTFS/trips.txt');
 
     if (LCSV.Cells[2, 0] <> 'trip_id') or (LCSV.Cells[0, 0] <> 'route_id') or (LCSV.Cells[1, 0] <> 'service_id') then begin
       WriteLn('trips.txt not in expected format:');
@@ -286,14 +288,27 @@ procedure SchedulesHandler(ARequest: TRequest; AResponse: TResponse);
 var
   LRoute: String;
   LResp: TTripResponseDynArr;
+  i: Integer;
   LJSONStreamer: TJSONStreamer;
+  LStringStream: TStringStream;
 begin
-  LRoute := ARequest.URI.Split(['/'])[2];
+  LRoute := ARequest.RouteParams['route'];
   LResp := BuildTripResponse(LRoute, GStopTimes, GStopTimesIxByTrip, GTrips, GTripsIxByRoute);
   LJSONStreamer := TJSONStreamer.Create(nil);
+  LJSONStreamer.Options := [jsoUseFormatString];
   try
     AResponse.ContentType := 'application/json';
-    AResponse.ContentStream := TStringStream.Create(LJSONStreamer.StreamVariant(LResp).AsJSON);
+    LStringStream := TStringStream.Create();
+
+    LStringStream.WriteString('[');
+    if Length(LResp) > 0 then begin
+      LStringStream.WriteString(LJSONStreamer.ObjectToJSON(LResp[0]).FormatJSON(AsCompressedJSON,0));
+      for i := 1 to Length(LResp) - 1 do
+        LStringStream.WriteString(',' + LJSONStreamer.ObjectToJSON(LResp[i]).FormatJSON(AsCompressedJSON,0));
+    end;
+    LStringStream.WriteString(']');
+
+    AResponse.ContentStream := LStringStream;
   finally
     LJSONStreamer.Free;
   end;
@@ -304,6 +319,7 @@ begin
   GetTrips(GTrips, GTripsIxByRoute);
 
   Application.Port := 4000;
-  HTTPRouter.RegisterRoute('/schedules/',@SchedulesHandler);
+  Application.Threaded := true;
+  HTTPRouter.RegisterRoute('/schedules/:route',@SchedulesHandler);
   Application.Run;
 end.
