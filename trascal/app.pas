@@ -11,7 +11,7 @@ uses
   jsonparser,
   fpjson,
   fpjsonrtti,
-  csvdocument,
+  csvutils,
   fphttpapp,
   httpdefs,
   httproute;
@@ -21,7 +21,10 @@ uses
 type
 
   TIntList = specialize TList<Integer>;
-  TStringIntListMap = specialize TDictionary<String, TIntList>;
+  TStringIntListMap = class(specialize TDictionary<String, TIntList>)
+  public
+    destructor Destroy; override;
+  end;
 
   TStopTime = class
   private
@@ -65,6 +68,7 @@ type
     property schedules: TCollection read FSchedules write FSchedules;
   public
     constructor Create(const ATripID,AServiceID,ARouteID: String);
+    destructor Destroy; override;
     // convenient Pascal style aliases
     property TripID: string read FTripID write FTripID;
     property ServiceID: string read FServiceID write FServiceID;
@@ -99,6 +103,17 @@ type
     property Items[Index: Integer]: TScheduleResponse read GetItem write SetItem;
   end;
 
+{ TStringIntListMap }
+
+destructor TStringIntListMap.Destroy;
+var
+  LValue: TIntList;
+begin
+  for LValue in Values do
+    LValue.Free;
+  inherited Destroy;
+end;
+
 { TStopTime }
 
 constructor TStopTime.Create(ATripID, AStopID, AArrival, ADeparture: string);
@@ -126,6 +141,12 @@ begin
   FServiceID := AServiceID;
   FRouteID   := ARouteID;
   FSchedules := TScheduleResponses.Create;
+end;
+
+destructor TTripResponse.Destroy;
+begin
+  FSchedules.Free;
+  inherited Destroy;
 end;
 
 { TScheduleResponse }
@@ -286,32 +307,58 @@ var
 
 procedure SchedulesHandler(ARequest: TRequest; AResponse: TResponse);
 var
-  LRoute: String;
-  LResp: TTripResponseDynArr;
   i: Integer;
+  LRoute: String;
+  LTripResponses: TTripResponseDynArr;
+  LTripResponse: TTripResponse;
+  LJSON: TJSONData;
   LJSONStreamer: TJSONStreamer;
   LStringStream: TStringStream;
 begin
   LRoute := ARequest.RouteParams['route'];
-  LResp := BuildTripResponse(LRoute, GStopTimes, GStopTimesIxByTrip, GTrips, GTripsIxByRoute);
+  LTripResponses := BuildTripResponse(LRoute, GStopTimes, GStopTimesIxByTrip, GTrips, GTripsIxByRoute);
   LJSONStreamer := TJSONStreamer.Create(nil);
-  LJSONStreamer.Options := [jsoUseFormatString];
-  try
-    AResponse.ContentType := 'application/json';
+  try    
     LStringStream := TStringStream.Create();
 
     LStringStream.WriteString('[');
-    if Length(LResp) > 0 then begin
-      LStringStream.WriteString(LJSONStreamer.ObjectToJSON(LResp[0]).FormatJSON(AsCompressedJSON,0));
-      for i := 1 to Length(LResp) - 1 do
-        LStringStream.WriteString(',' + LJSONStreamer.ObjectToJSON(LResp[i]).FormatJSON(AsCompressedJSON,0));
+    if Length(LTripResponses) > 0 then begin
+      LJSON := LJSONStreamer.ObjectToJSON(LTripResponses[0]); 
+      LStringStream.WriteString(LJSON.FormatJSON(AsCompressedJSON,0));
+      LJSON.Free;
+      for i := 1 to Length(LTripResponses) - 1 do begin
+        LJSON := LJSONStreamer.ObjectToJSON(LTripResponses[i]); 
+        LStringStream.WriteString(',' + LJSON.FormatJSON(AsCompressedJSON,0));
+        LJSON.Free;
+      end;
     end;
     LStringStream.WriteString(']');
 
+    AResponse.ContentType := 'application/json';
+    AResponse.ContentLength := LStringStream.Size;
     AResponse.ContentStream := LStringStream;
+    AResponse.SendContent;
   finally
+    LStringStream.Free;
+    for LTripResponse in LTripResponses do
+      LTripResponse.Free;
     LJSONStreamer.Free;
   end;
+end;
+
+procedure StopHandler(ARequest: TRequest; AResponse: TResponse);
+var
+  GStopTime: TStopTime;
+  GTrip: TTrip;
+begin
+  for GStopTime in GStopTimes do 
+    GStopTime.Free;
+  GStopTimesIxByTrip.Free;
+  for GTrip in GTrips do
+    GTrip.Free;
+  GTripsIxByRoute.Free;
+
+  Application.Terminate;
 end;
 
 begin
@@ -320,6 +367,7 @@ begin
 
   Application.Port := 4000;
   Application.Threaded := true;
-  HTTPRouter.RegisterRoute('/schedules/:route',@SchedulesHandler);
+  HTTPRouter.RegisterRoute('/schedules/:route', @SchedulesHandler);
+  HTTPRouter.RegisterRoute('/stop', @StopHandler);
   Application.Run;
 end.
