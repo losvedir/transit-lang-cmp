@@ -211,7 +211,7 @@ begin
       Halt(1);
     end;
 
-    SetLength(AStopTimes, 1000000);
+    SetLength(AStopTimes, LCSV.RowCount - 1);
     AStopTimesIxByTrip := TStringIntListMap.Create;
     for i := 1 to LCSV.RowCount - 1 do begin
       LTrip := LCSV.Cells[0, i];
@@ -255,12 +255,10 @@ begin
       Halt(1);
     end;  
 
-    SetLength(ATrips, 70000);
+    SetLength(ATrips, LCSV.RowCount - 1);
     ATripsIxByRoute := TStringIntListMap.Create;
     for i := 1 to LCSV.RowCount - 1 do begin
-      Write('Route: ');
       LRoute := LCSV.Cells[0, i];
-      WriteLn(LRoute);
 
       if not ATripsIxByRoute.TryGetValue(LRoute, LTripsIx) then begin
         LTripsIx := TIntList.Create;
