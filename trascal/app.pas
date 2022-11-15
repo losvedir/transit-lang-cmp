@@ -335,9 +335,7 @@ begin
     LStringStream.WriteString(']');
 
     AResponse.ContentType := 'application/json';
-    AResponse.ContentLength := LStringStream.Size;
-    AResponse.ContentStream := LStringStream;
-    AResponse.SendContent;
+    AResponse.Content := LStringStream.DataString;
   finally
     LStringStream.Free;
     for LTripResponse in LTripResponses do
