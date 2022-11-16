@@ -5,10 +5,11 @@ unit csvutils;
 interface
 
 uses
-  SysUtils;
+  SysUtils,gvector;
 
 type
-  T2DStringArray = array of TStringArray;
+  TStringVector = specialize TVector<String>;
+  T2DStringArray = specialize TVector<TStringVector>;
 
   TCSVDocument = class
   private
@@ -19,6 +20,7 @@ type
     function GetColCount(const ARow: SizeInt): SizeInt; inline;
     function GetRowCount: SizeInt; inline;
   public
+    destructor Destroy; override;
     procedure LoadFromFile(const AFileName: String);
     property Cells[const ACol, ARow: SizeInt]: String read GetCell write SetCell;
     property Delimiter: Char read FDelimiter write FDelimiter;
@@ -30,6 +32,18 @@ implementation
 
 uses
   Classes,DateUtils;
+
+destructor TCSVDocument.Destroy;
+var
+  i: SizeInt;
+begin
+  if Assigned(FCells) then begin
+    for i := 0 to FCells.Size - 1 do
+      FCells[i].Free;
+    FCells.Free;
+  end;
+  inherited Destroy;
+end;
 
 procedure TCSVDocument.LoadFromFile(const AFileName: String);
 var
@@ -48,50 +62,49 @@ begin
   c := 0;
   
   if n > 0 then begin
-    SetLength(FCells, 1);
+    FCells := T2DStringArray.Create;
+    FCells.PushBack(TStringVector.Create);
     while i <= n do begin
       case s[i] of
         ',': begin
-          SetLength(FCells[r], c + 1);
-          FCells[r, c] := Copy(s, j, i - j);
-          Inc(c);
+          FCells[r].PushBack(Copy(s, j, i - j));
           j := i + 1;
+          Inc(c);
         end;
         #10: begin
-          SetLength(FCells[r], c + 1);
-          FCells[r, c] := Copy(s, j, i - j);
+          FCells[r].PushBack(Copy(s, j, i - j));
+          j := i + 1;
           Inc(r);
           c := 0;
-          SetLength(FCells, r + 1);
-          j := i + 1;
+          FCells.PushBack(TStringVector.Create);
         end;
       end;
       Inc(i);
     end;
   end;
-  SetLength(FCells, r);
+  FCells.PopBack;
 
   fs.Free;
 end;
 
 function TCSVDocument.GetCell(const ACol, ARow: SizeInt): String; inline;
 begin
-  Result := FCells[ARow, ACol]
+  Result := FCells[ARow][ACol]
 end;
 
 procedure TCSVDocument.SetCell(const ACol, ARow: SizeInt; AValue: String); inline;
 begin
-  FCells[ARow, ACol] := AValue;
+  FCells[ARow][ACol] := AValue;
 end;
 
 function TCSVDocument.GetColCount(const ARow: SizeInt): SizeInt; inline;
 begin
-  Result := Length(FCells[ARow]);
+  Result := FCells[ARow].Size;
 end;
 
 function TCSVDocument.GetRowCount: SizeInt; inline;
 begin
-  Result := Length(FCells);
+  Result := FCells.Size;
 end;
 
 end.
