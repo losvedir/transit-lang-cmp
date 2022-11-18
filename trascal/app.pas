@@ -7,24 +7,23 @@ uses
   Classes,
   SysUtils,
   DateUtils,
-  generics.collections,
+  lgUtils,
+  lgHashMap,
+  lgVector,
   jsonparser,
   fpjson,
   fpjsonrtti,
   csvutils,
   fphttpapp,
   httpdefs,
+  httpprotocol,
   httproute;
 
 {$M+}
 
 type
-
-  TIntList = specialize TList<Integer>;
-  TStringIntListMap = class(specialize TDictionary<String, TIntList>)
-  public
-    destructor Destroy; override;
-  end;
+  TIntList          = specialize TGVector<Integer>;
+  TStringIntListMap = specialize TGObjHashMapLP<String, TIntList>;
 
   TStopTime = class
   private
@@ -102,17 +101,6 @@ type
     constructor Create;
     property Items[Index: Integer]: TScheduleResponse read GetItem write SetItem;
   end;
-
-{ TStringIntListMap }
-
-destructor TStringIntListMap.Destroy;
-var
-  LValue: TIntList;
-begin
-  for LValue in Values do
-    LValue.Free;
-  inherited Destroy;
-end;
 
 { TStopTime }
 
@@ -216,38 +204,34 @@ var
   LStart,LEnd: TDateTime;
   i: Integer;
   LTrip: String;
-  LStopTimesIx: TIntList;
+  LStopTimesIx: ^TIntList;
 begin
   LCSV := TCSVDocument.Create;
   try
-    LCSV.Delimiter := ',';
     LStart := Now;
-
+ 
     LCSV.LoadFromFile('../MBTA_GTFS/stop_times.txt');
-
-    if (LCSV.Cells[0, 0] <> 'trip_id') or (LCSV.Cells[3, 0] <> 'stop_id') or (LCSV.Cells[1, 0] <> 'arrival_time') or (LCSV.Cells[2, 0] <> 'departure_time') then begin
+ 
+    if (LCSV[0, 0] <> 'trip_id') or (LCSV[3, 0] <> 'stop_id') or (LCSV[1, 0] <> 'arrival_time') or (LCSV[2, 0] <> 'departure_time') then begin
       WriteLn('stop_times.txt not in expected format:');
       for i := 0 to LCSV.ColCount[0] - 1 do begin
-        WriteLn(i, ' ' + LCSV.Cells[i, 0]);
+        WriteLn(i, ' ' + LCSV[i, 0]);
       end;
       Halt(1);
     end;
-
+ 
     SetLength(AStopTimes, LCSV.RowCount - 1);
-    AStopTimesIxByTrip := TStringIntListMap.Create;
+    AStopTimesIxByTrip := TStringIntListMap.Create([moOwnsValues]);
     for i := 1 to LCSV.RowCount - 1 do begin
-      LTrip := LCSV.Cells[0, i];
-
-      if not AStopTimesIxByTrip.TryGetValue(LTrip, LStopTimesIx) then begin
-        LStopTimesIx := TIntList.Create;
-        AStopTimesIxByTrip.Add(LTrip, LStopTimesIx);
-      end;
-      LStopTimesIx.Add(i);
-      AStopTimes[i - 1] := TStopTime.Create(LTrip, LCSV.Cells[3, i], LCSV.Cells[1, i], LCSV.Cells[2, i]);
+      LTrip := LCSV[0, i];
+      if not AStopTimesIxByTrip.FindOrAddMutValue(LTrip, LStopTimesIx) then
+        LStopTimesIx^ := TIntList.Create;
+      LStopTimesIx^.Add(i - 1);
+      AStopTimes[i - 1] := TStopTime.Create(LTrip, LCSV[3, i], LCSV[1, i], LCSV[2, i]);
     end;
-
+ 
     LEnd := Now;
-
+ 
     WriteLn('parsed ', Length(AStopTimes), ' stop times in ', SecondSpan(LStart, LEnd):1:3,' seconds');
   finally
     LCSV.Free;
@@ -260,12 +244,10 @@ var
   LStart,LEnd: TDateTime;
   i: Integer;
   LRoute: String;
-  LTripsIx: TIntList;
+  LTripsIx: ^TIntList;
 begin
   LCSV := TCSVDocument.Create;
   try
-    LCSV.Delimiter := ',';
-
     LStart := Now;
 
     LCSV.LoadFromFile('../MBTA_GTFS/trips.txt');
@@ -279,21 +261,18 @@ begin
     end;  
 
     SetLength(ATrips, LCSV.RowCount - 1);
-    ATripsIxByRoute := TStringIntListMap.Create;
+    ATripsIxByRoute := TStringIntListMap.Create([moOwnsValues]);
     for i := 1 to LCSV.RowCount - 1 do begin
       LRoute := LCSV.Cells[0, i];
-
-      if not ATripsIxByRoute.TryGetValue(LRoute, LTripsIx) then begin
-        LTripsIx := TIntList.Create;
-        ATripsIxByRoute.Add(LRoute, LTripsIx);
-      end;
-      LTripsIx.Add(i);
+      if not ATripsIxByRoute.FindOrAddMutValue(LRoute, LTripsIx) then
+        LTripsIx^ := TIntList.Create;
+      LTripsIx^.Add(i - 1);
       ATrips[i - 1] := TTrip.Create(LCSV.Cells[2, i], LRoute, LCSV.Cells[1, i]);
     end;
 
     LEnd := Now;
 
-    WriteLn('parsed ', Length(ATrips), ' trips in ', SecondSpan(LStart, LEnd):1:3,' seconds');
+    WriteLn('parsed ', Length(ATrips), ' trips in ', MilliSecondSpan(LStart, LEnd):1:3,'ms');
   finally
     LCSV.Free;
   end;
