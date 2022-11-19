@@ -46,7 +46,7 @@ defmodule Trexit.GTFS.Loader do
     # assert column order
     [["trip_id", "arrival_time", "departure_time", "stop_id" | _]] =
       "../MBTA_GTFS/stop_times.txt"
-      |> File.stream!(skip_headers: false)
+      |> File.stream!()
       |> NimbleCSV.RFC4180.parse_stream(skip_headers: false)
       |> Stream.take(1)
       |> Enum.to_list()
