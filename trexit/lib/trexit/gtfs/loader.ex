@@ -79,7 +79,7 @@ defmodule Trexit.GTFS.Loader do
     # assert column order
     [["route_id", "service_id", "trip_id" | _]] =
       "../MBTA_GTFS/trips.txt"
-      |> File.stream!(skip_headers: false)
+      |> File.stream!()
       |> NimbleCSV.RFC4180.parse_stream(skip_headers: false)
       |> Stream.take(1)
       |> Enum.to_list()
