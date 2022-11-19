@@ -76,7 +76,7 @@ from the trip ID to a list of indices into the big stop time list.
 | -------- | --------- |
 | C#       | 732       |
 | Deno     | 3,033     |
-| Elixir   | 6,183     |
+| Elixir   | 3,270     |
 | Go       | 848       |
 | Rust     | 467       |
 | Scala    | 858       |
