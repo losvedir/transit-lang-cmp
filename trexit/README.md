@@ -10,5 +10,5 @@ Elixir 1.14.0 (compiled with Erlang/OTP 25)
 Run with
 
 ```
-> env MIX_ENV=prod mix run --no-halt
+> env MIX_ENV=prod mix run --preload-modules --no-halt
 ```
