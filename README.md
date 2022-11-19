@@ -76,7 +76,7 @@ from the trip ID to a list of indices into the big stop time list.
 | -------- | --------- |
 | C#       | 732       |
 | Deno     | 3,033     |
-| Elixir   | 5,884     |
+| Elixir   | 6,183     |
 | Go       | 848       |
 | Rust     | 467       |
 | Scala    | 858       |
@@ -114,7 +114,7 @@ All these were with 50 concurrent virtual users.
 | -------- | ------------ | ----------- | ------------ |
 | C#       | 1,543        | 638         | 1,600        |
 | Deno     | 286          | 285         | 480          |
-| Elixir   | 397          | 746         | 1,200        |
+| Elixir   | 396          | 751         | 1,200        |
 | Go       | 2,663        | 606         | 1,100        |
 | Rust     | 2,289        | 640         | 564          |
 | Scala    | 471          | 710         | 3,600        |
@@ -134,7 +134,7 @@ better).
 | -------- | ----- | ------ | ------ | ------ |
 | C#       | 2,280 | 11,796 | 13,261 | 13,095 |
 | Deno     | 2,396 | 3,525  | 3,602  | 3,624  |
-| Elixir   | 621   | 3,308  | 3,934  | 4,001  |
+| Elixir   | 624   | 3,153  | 3,814  | 4,045  |
 | Go       | 2,269 | 10,367 | 10,855 | 10,945 |
 | Rust     | 2,924 | 17,474 | 18,934 | 18,764 |
 | Scala    | 780   | 4,564  | 4,712  | 4,734  |
@@ -146,7 +146,7 @@ virtual user count (lower is better):
 | -------- | ------------ | ----------- | ------------- | ------------- |
 | C#       | .3 / 1 / 13  | .6 / 2 / 28 | 3 / 10 / 118  | 6 / 20 / 143  |
 | Deno     | .3 / 1 / 199 | 3 / 4 / 204 | 14 / 18 / 217 | 27 / 35 / 236 |
-| Elixir   | 1 / 4 / 7    | 2 / 7 / 18  | 12 / 23 / 71  | 23 / 47 / 115 |
+| Elixir   | 1 / 4 / 7    | 3 / 8 / 19  | 12 / 24 / 65  | 22 / 47 / 140 |
 | Go       | .3 / 1 / 13  | .6 / 3 / 43 | 3 / 16 / 79   | 6 / 29 / 129  |
 | Rust     | .2 / .7 / 2  | .4 / 1 / 11 | 2 / 5 / 31    | 5 / 10 / 45   |
 | Scala    | 1 / 3 / 6    | 2 / 5 / 125 | 4 / 58 / 395  | 11 / 86 / 583 |
@@ -270,13 +270,18 @@ In that scenario, I've had issues before with how to handle locking and atomic
 updates to ETS data. Most likely it would be something like create a whole new
 ETS table in the background and then swap it out for this one after it's ready.
 
-I used Phoenix here since that's pretty much the standard in Elixir, though it
-might be a bit heavier weight than the other apps. But my understanding is that
-it's mostly just plugs that get compiled in, so it's pretty lightweight in how
-much it actually affects performance vs the minimal possible thing I could do.
+Initially I used Phoenix here, since in my experience it's the go-to way to
+quickly spin up a web app in Elixir-land, but Jose Valim (!!!) issued a PR to
+switch to a simple Plug, to make the code more comparable to the other
+languages, for someone perusing what a simple implementation in each might look
+like. The actual benchmarks were roughly comparable, with only a very slight
+edge to Plug in one of the benchmarks, which impressed me with how lightweight
+Phoenix is for all you get!
 
 The final performance results were unfortunately low, an order of magnitude
-worse than Rust, and a little behind Deno.
+worse than Rust, but faster than Deno. On the other hand the ratio of median
+response time to max response time was lowest with Elixir than any other
+language, which can have its own benefits.
 
 ### Go
 
