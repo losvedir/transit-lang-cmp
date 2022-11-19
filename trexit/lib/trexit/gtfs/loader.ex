@@ -32,14 +32,14 @@ defmodule Trexit.GTFS.Loader do
         get_stop_times()
       end)
 
-    Logger.info("Parsed stop_times.txt in #{time / 1000} ms")
+    IO.puts("Parsed stop_times.txt in #{time / 1000} ms")
 
     {time, _} =
       :timer.tc(fn ->
         get_trips()
       end)
 
-    Logger.info("Parsed trips.txt in #{time / 1000} ms")
+    IO.puts("Parsed trips.txt in #{time / 1000} ms")
   end
 
   defp get_stop_times() do

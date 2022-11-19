@@ -52,7 +52,18 @@ I'm running this on my personal laptop, from Apple -> About this Mac:
 MacBook Pro (14-inch, 2021)
 Chip: Apple M1 Pro
 Memory: 32 GB
+
+MacOS: Ventura 13.0
 ```
+
+The process (such as it is) for benchmarking:
+
+- Close all apps other than Terminal and Activity Monitor
+- Use ActivityMonitor to close unnecessary background processes (Chrome updater,
+  etc)
+- Wait to see >99% "Idle"
+- Start the app server (instructions in each app's README)
+- Run all the tests
 
 ### Loading stop_times.txt
 
@@ -63,12 +74,12 @@ from the trip ID to a list of indices into the big stop time list.
 
 | Language | Time (ms) |
 | -------- | --------- |
-| C#       | 1,390     |
-| Deno     | 2,905     |
-| Elixir   | 5,986     |
-| Go       | 842       |
-| Rust     | 565       |
-| Scala    | 931       |
+| C#       | 732       |
+| Deno     | 3,033     |
+| Elixir   | 5,884     |
+| Go       | 848       |
+| Rust     | 467       |
+| Scala    | 858       |
 | SQLite   | ~ 4,000   |
 
 ### Webserver performance
@@ -101,12 +112,12 @@ All these were with 50 concurrent virtual users.
 
 | Language | Requests/sec | Max CPU (%) | Max RAM (MB) |
 | -------- | ------------ | ----------- | ------------ |
-| C#       | 1,534        | 654         | 1,750        |
-| Deno     | 286          | 280         | 400          |
-| Elixir   | 381          | 755         | 1,300        |
-| Go       | 2,715        | 620         | 1,100        |
-| Rust     | 2,839        | 619         | 603          |
-| Scala    | 432          | 715         | 3,150        |
+| C#       | 1,543        | 638         | 1,600        |
+| Deno     | 286          | 285         | 480          |
+| Elixir   | 397          | 746         | 1,200        |
+| Go       | 2,663        | 606         | 1,100        |
+| Rust     | 2,289        | 640         | 564          |
+| Scala    | 471          | 710         | 3,600        |
 
 #### Smaller responses
 
@@ -121,24 +132,24 @@ better).
 
 | Language | 1 VU  | 10 VU  | 50 VU  | 100 VU |
 | -------- | ----- | ------ | ------ | ------ |
-| C#       | 2,227 | 11,663 | 13,005 | 13,102 |
-| Deno     | 2,808 | 3,882  | 3,852  | 3,753  |
-| Elixir   | 616   | 3,369  | 3,801  | 3,983  |
-| Go       | 2,283 | 10,551 | 11,078 | 11,091 |
-| Rust     | 3,501 | 20,496 | 22,437 | 22,283 |
-| Scala    | 705   | 4,204  | 4,289  | 4,332  |
+| C#       | 2,280 | 11,796 | 13,261 | 13,095 |
+| Deno     | 2,396 | 3,525  | 3,602  | 3,624  |
+| Elixir   | 621   | 3,308  | 3,934  | 4,001  |
+| Go       | 2,269 | 10,367 | 10,855 | 10,945 |
+| Rust     | 2,924 | 17,474 | 18,934 | 18,764 |
+| Scala    | 780   | 4,564  | 4,712  | 4,734  |
 
 Response times in milliseconds: median / p95 / max, by language and concurrent
 virtual user count (lower is better):
 
-| Language | 1 VU        | 10 VU       | 50 VU         | 100 VU         |
-| -------- | ----------- | ----------- | ------------- | -------------- |
-| C#       | .3 / 1 / 88 | .6 / 2 / 27 | 2 / 12 / 138  | 6 / 17 / 75    |
-| Deno     | .3 / .8 / 5 | 2 / 4 / 254 | 13 / 16 / 218 | 26 / 33 / 265  |
-| Elixir   | 1 / 4 / 12  | 2 / 7 / 15  | 13 / 23 / 64  | 23 / 46 / 129  |
-| Go       | .3 / 1 / 19 | .6 / 2 / 36 | 3 / 15 / 111  | 6 / 29 / 140   |
-| Rust     | .2 / .6 / 3 | .4 / 1 / 9  | 2 / 4 / 36    | 4 / 9 / 85     |
-| Scala    | 1 / 3 / 109 | 2 / 5 / 129 | 3 / 58 / 394  | 10 / 109 / 587 |
+| Language | 1 VU         | 10 VU       | 50 VU         | 100 VU        |
+| -------- | ------------ | ----------- | ------------- | ------------- |
+| C#       | .3 / 1 / 13  | .6 / 2 / 28 | 3 / 10 / 118  | 6 / 20 / 143  |
+| Deno     | .3 / 1 / 199 | 3 / 4 / 204 | 14 / 18 / 217 | 27 / 35 / 236 |
+| Elixir   | 1 / 4 / 7    | 2 / 7 / 18  | 12 / 23 / 71  | 23 / 47 / 115 |
+| Go       | .3 / 1 / 13  | .6 / 3 / 43 | 3 / 16 / 79   | 6 / 29 / 129  |
+| Rust     | .2 / .7 / 2  | .4 / 1 / 11 | 2 / 5 / 31    | 5 / 10 / 45   |
+| Scala    | 1 / 3 / 6    | 2 / 5 / 125 | 4 / 58 / 395  | 11 / 86 / 583 |
 
 ### Searching the data
 
