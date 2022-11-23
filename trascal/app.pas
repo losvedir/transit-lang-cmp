@@ -2,11 +2,14 @@ program trascal;
 
 {$mode objfpc}{$H+}
 
+{$define usemormot2httpserver}
+
 uses
   cthreads,
   Classes,
   SysUtils,
   DateUtils,
+  StrUtils,
   lgUtils,
   lgHashMap,
   lgVector,
@@ -14,10 +17,21 @@ uses
   fpjson,
   fpjsonrtti,
   csvutils,
+  {$ifdef usemormot2httpserver}
+  mormot.core.base,
+  mormot.core.os,
+  mormot.core.rtti,
+  mormot.core.log,
+  mormot.core.text,
+  mormot.net.http,
+  mormot.net.server,
+  mormot.net.async
+  {$else}
   fphttpapp,
   httpdefs,
-  httpprotocol,
-  httproute;
+  httpprotocol
+  {$endif}
+  ;
 
 {$M+}
 
@@ -232,7 +246,7 @@ begin
  
     LEnd := Now;
  
-    WriteLn('parsed ', Length(AStopTimes), ' stop times in ', SecondSpan(LStart, LEnd):1:3,' seconds');
+    WriteLn('parsed ', Length(AStopTimes), ' stop times in ', MilliSecondSpan(LStart, LEnd):1:0, 'ms');
   finally
     LCSV.Free;
   end;
@@ -272,7 +286,7 @@ begin
 
     LEnd := Now;
 
-    WriteLn('parsed ', Length(ATrips), ' trips in ', MilliSecondSpan(LStart, LEnd):1:3,'ms');
+    WriteLn('parsed ', Length(ATrips), ' trips in ', MilliSecondSpan(LStart, LEnd):1:0, 'ms');
   finally
     LCSV.Free;
   end;
@@ -283,6 +297,113 @@ var
   GStopTimesIxByTrip: TStringIntListMap;
   GTrips: TTripDynArr;
   GTripsIxByRoute: TStringIntListMap;
+
+{$ifdef usemormot2httpserver}
+
+type
+  TSimpleHttpAsyncServer = class
+  private
+    fHttpServer: THttpServerSocketGeneric;
+  protected
+    function DoOnRequest(Ctxt: THttpServerRequestAbstract): cardinal;
+  public
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
+{ TSimpleHttpAsyncServer }
+
+function TSimpleHttpAsyncServer.DoOnRequest(Ctxt: THttpServerRequestAbstract): cardinal;
+var
+  st,ed: TDateTime;
+  i: Integer;
+  LRoute: String;
+  LTripResponses: TTripResponseDynArr;
+  LTripResponse: TTripResponse;
+  LJSON: TJSONData;
+  LJSONStreamer: TJSONStreamer;
+  LStringStream: TStringStream;
+begin
+  i := RPos('/', Ctxt.Url);
+  if i = 0 then Exit;
+
+  LRoute := Copy(Ctxt.Url, i + 1, Length(Ctxt.Url) - i);
+  st := Now;
+  LTripResponses := BuildTripResponse(LRoute, GStopTimes, GStopTimesIxByTrip, GTrips, GTripsIxByRoute);
+  ed := Now;
+  writeln('BuildTripResponse: ', MilliSecondSpan(st,ed):1:0, 'ms');
+
+  LJSONStreamer := TJSONStreamer.Create(nil);
+  try
+    st := Now;
+    LStringStream := TStringStream.Create();
+
+    LStringStream.WriteString('[');
+    if Length(LTripResponses) > 0 then begin
+      LJSON := LJSONStreamer.ObjectToJSON(LTripResponses[0]); 
+      LStringStream.WriteString(LJSON.FormatJSON(AsCompressedJSON,0));
+      LJSON.Free;
+      for i := 1 to Length(LTripResponses) - 1 do begin
+        LJSON := LJSONStreamer.ObjectToJSON(LTripResponses[i]); 
+        LStringStream.WriteString(',' + LJSON.FormatJSON(AsCompressedJSON,0));
+        LJSON.Free;
+      end;
+    end;
+    LStringStream.WriteString(']');
+
+    Ctxt.OutContentType := 'application/json';  
+    Ctxt.OutContent := LStringStream.DataString;
+    ed := Now;
+    writeln('JSONify: ', MilliSecondSpan(st,ed):1:0, 'ms');
+  finally
+    st := Now;
+    LStringStream.Free;
+    for LTripResponse in LTripResponses do
+      LTripResponse.Free;
+    LJSONStreamer.Free;
+    ed := Now;
+    writeln('cleanup: ', MilliSecondSpan(st,ed):1:0, 'ms');
+  end;
+
+  Result := HTTP_SUCCESS;
+end;
+
+constructor TSimpleHttpAsyncServer.Create;
+begin
+  inherited Create;
+  fHttpServer := THttpAsyncServer.Create(
+    '4000', nil, nil, '', 4, 30000,
+    [hsoNoXPoweredHeader
+    //, hsoLogVerbose
+    ]);
+  fHttpServer.HttpQueueLength := 100000; // needed e.g. from wrk/ab benchmarks
+  fHttpServer.OnRequest := @DoOnRequest;
+  fHttpServer.WaitStarted; // raise exception e.g. on binding issue
+end;
+
+destructor TSimpleHttpAsyncServer.Destroy;
+begin
+  fHttpServer.Free;
+  inherited Destroy;
+end;
+
+var
+  GSimpleServer: TSimpleHttpAsyncServer;
+begin
+  GetStopTimes(GStopTimes, GStopTimesIxByTrip);
+  GetTrips(GTrips, GTripsIxByRoute);
+
+  GSimpleServer := TSimpleHttpAsyncServer.Create();
+  try
+    {$I-}
+    ConsoleWaitForEnterKey;
+    writeln(ObjectToJson(GSimpleServer.fHttpServer, [woHumanReadable]));
+  finally
+    GSimpleServer.Free;
+  end;
+end.
+
+{$else usemormot2httpserver}
 
 procedure SchedulesHandler(ARequest: TRequest; AResponse: TResponse);
 var
@@ -324,15 +445,8 @@ begin
 end;
 
 procedure StopHandler(ARequest: TRequest; AResponse: TResponse);
-var
-  GStopTime: TStopTime;
-  GTrip: TTrip;
 begin
-  for GStopTime in GStopTimes do 
-    GStopTime.Free;
   GStopTimesIxByTrip.Free;
-  for GTrip in GTrips do
-    GTrip.Free;
   GTripsIxByRoute.Free;
 
   Application.Terminate;
@@ -348,3 +462,5 @@ begin
   HTTPRouter.RegisterRoute('/stop', @StopHandler);
   Application.Run;
 end.
+
+{$endif usemormot2httpserver}

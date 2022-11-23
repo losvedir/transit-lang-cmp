@@ -48,51 +48,64 @@ end;
  
 destructor TCSVDocument.Destroy;
 begin
-  FCells.Free;
-  inherited;
+  if Assigned(FCells) then
+    FCells.Free;
+  inherited Destroy;
 end;
  
 procedure TCSVDocument.LoadFromFile(const aFileName: string);
 var
-  ss: specialize TGAutoRef<TStringStream>;
-  I, CellStart, Size: SizeInt;
+  ms: specialize TGAutoRef<TMemoryStream>;
+  p, pCell, pEnd: pChar;
+  Size: SizeInt;
   Row: TStrList;
-  s: string;
+  pItem: TStrList.PItem;
 begin
-  ss.Instance.LoadFromFile(aFileName);
-  s := ss.Instance.DataString;
-  ss.Clear;
-
-  FCells := TStrList2D.Create;
-  
-  CellStart := 0;
+  ms.Instance.LoadFromFile(aFileName);
+  if FCells = nil then
+    FCells := TStrList2D.Create;
+  FCells.Clear;
+  p := ms.Instance.Memory;
+  pEnd := p + ms.Instance.Size;
+  pCell := p;
   Size := -1;
   Row := nil;
  
-  for I := 1 to Length(s) do
-    case s[I] of
+  while p < pEnd do begin
+    case p^ of
       ',':
         begin
           if Row = nil then begin
             Row := TStrList.Create(Max(Size, DEFAULT_CONTAINER_CAPACITY));
             FCells.Add(Row);
           end;
-          Row.Add(Copy(s, CellStart, I - CellStart));
-          CellStart := I + 1;
+          pItem := Row.UncMutable[Row.Add('')];
+          if p - pCell > 0 then begin
+            SetLength(pItem^, p - pCell);
+            Move(pCell^, PChar(pItem^)^, p - pCell);
+          end;
+          pCell := p + 1;
         end;
-      #13, #10:
-        begin
-          if CellStart = 0 then continue;
-          Row.Add(Copy(s, CellStart, I - CellStart));
+      #10, #13:
+        if Row <> nil then begin
+          pItem := Row.UncMutable[Row.Add('')];
+          if p - pCell > 0 then begin
+            SetLength(pItem^, p - pCell);
+            Move(pCell^, PChar(pItem^)^, p - pCell);
+          end;
           if Size = -1 then
             Size := Row.Count;
-          CellStart := 0;
           Row := nil;
+          pCell := p + 1;
+          Inc(pCell, Ord(pCell^ in [#10, #13]));
         end;
-    else
-      if CellStart = 0 then
-        CellStart := I;
     end;
+    Inc(p);
+  end;
+  if Row = nil then exit;
+  pItem := Row.UncMutable[Row.Add('')];
+  SetLength(pItem^, p - pCell);
+  Move(pCell^, PChar(pItem^)^, p - pCell);
 end;
  
 end. 
