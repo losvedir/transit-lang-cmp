@@ -29,7 +29,8 @@ uses
   {$else}
   fphttpapp,
   httpdefs,
-  httpprotocol
+  httpprotocol,
+  httproute
   {$endif}
   ;
 
