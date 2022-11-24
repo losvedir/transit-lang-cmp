@@ -44,9 +44,11 @@ module Tryst
     def initialize(@stop_times, @stop_times_idx, @trip_id, @route_id, @service_id)
     end
 
-    def schedules
-      @stop_times_idx[trip_id].map do |idx|
-        @stop_times[idx]
+    def schedules_json(j)
+      j.array do
+        @stop_times_idx[trip_id].each do |idx|
+          @stop_times[idx].to_json(j)
+        end
       end
     end
 
@@ -55,16 +57,7 @@ module Tryst
         j.field "trip_id", trip_id
         j.field "route_id", route_id
         j.field "service_id", service_id
-        j.field "schedules", schedules
-        #  do
-        #   j.array do
-        #     schedules.each do |stop_time|
-        #       j.start_scalar
-        #       stop_time.to_json(io)
-        #       j.end_scalar
-        #     end
-        #   end
-        # end
+        j.field "schedules" { schedules_json(j) }
       end
     end
 
@@ -101,12 +94,17 @@ module Tryst
   server = HTTP::Server.new do |context|
     request = context.request
     name = request.path.split('/').last
-    route = routes_idx[name].map do |idx|
-      routes[idx]
-    end
+    route = 
     response = context.response
     response.content_type = "application/json"
-    route.to_json(response.output)
+    j = JSON::Builder.new(response.output)
+    j.document do
+      j.array do
+        routes_idx[name].each do |idx|
+          routes[idx].to_json(j)
+        end
+      end
+    end
   end
 
   address = server.bind_tcp 4000
