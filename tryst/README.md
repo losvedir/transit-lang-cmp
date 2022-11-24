@@ -1,27 +1,17 @@
-# Transit Data app with Crystal
+# Tryst
 
-TODO: Write a description here
+```shell
+> brew install crystal
+> crystal --version
+Crystal 1.6.2 (2022-11-03)
 
-## Installation
+LLVM: 14.0.6
+Default target: aarch64-apple-darwin22.1.0
+> crystal build --release -Dpreview_mt src/tryst.cr
+> CRYSTAL_WORKERS=8 ./tryst
+Loaded 1715408 stop times for 68185 trips in 00:00:01.512136000
+Loaded 68185 trips for 190 routes in 00:00:00.104107000
+Listening on http://127.0.0.1:4000
+```
 
-TODO: Write installation instructions here
-
-## Usage
-
-TODO: Write usage instructions here
-
-## Development
-
-TODO: Write development instructions here
-
-## Contributing
-
-1. Fork it (<https://github.com/your-github-user/tryst/fork>)
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
-
-## Contributors
-
-- [Joshua Paine](https://github.com/your-github-user) - creator and maintainer
+Gets performance generally comparable to C# or Go. Compared to those implementations, Tryst usually has lower P95 times but noteably higher max times: 300ms-450ms on all tests. I suppose it's GC pauses. Memory usage tops out at ~460MB, CPU usage reaches 650% in the large responses test.
