@@ -1,0 +1,181 @@
+joshua@Pressfield transit-lang-cmp % k6 run -u 50 --duration 30s loadTest.js
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: loadTest.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 50 max VUs, 1m0s max duration (incl. graceful stop):
+           * default: 50 looping VUs for 30s (gracefulStop: 30s)
+
+
+running (0m32.2s), 00/50 VUs, 524 complete and 0 interrupted iterations
+default ✓ [======================================] 50 VUs  30s
+
+     data_received..................: 44 GB  1.4 GB/s
+     data_sent......................: 4.9 MB 152 kB/s
+     http_req_blocked...............: avg=3.74µs  min=0s    med=1µs     max=6.96ms   p(90)=1µs     p(95)=2µs    
+     http_req_connecting............: avg=1.19µs  min=0s    med=0s      max=1.88ms   p(90)=0s      p(95)=0s     
+     http_req_duration..............: avg=30.12ms min=42µs  med=26.21ms max=371.81ms p(90)=54.37ms p(95)=65.67ms
+       { expected_response:true }...: avg=30.12ms min=42µs  med=26.21ms max=371.81ms p(90)=54.37ms p(95)=65.67ms
+     http_req_failed................: 0.00%  ✓ 0           ✗ 51876
+     http_req_receiving.............: avg=5.02ms  min=8µs   med=2.71ms  max=307.16ms p(90)=12.53ms p(95)=16.43ms
+     http_req_sending...............: avg=11.36µs min=1µs   med=3µs     max=15.43ms  p(90)=6µs     p(95)=11µs   
+     http_req_tls_handshaking.......: avg=0s      min=0s    med=0s      max=0s       p(90)=0s      p(95)=0s     
+     http_req_waiting...............: avg=25.08ms min=30µs  med=21.08ms max=249.73ms p(90)=47.73ms p(95)=58.89ms
+     http_reqs......................: 51876  1613.077909/s
+     iteration_duration.............: avg=2.98s   min=1.57s med=2.89s   max=4.96s    p(90)=3.83s   p(95)=4.02s  
+     iterations.....................: 524    16.293716/s
+     vus............................: 2      min=2         max=50 
+     vus_max........................: 50     min=50        max=50 
+
+joshua@Pressfield transit-lang-cmp % k6 run -u 1 --duration 30s loadTestSmallResponses.js
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: loadTestSmallResponses.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 1 max VUs, 1m0s max duration (incl. graceful stop):
+           * default: 1 looping VUs for 30s (gracefulStop: 30s)
+
+
+running (0m30.0s), 0/1 VUs, 2735 complete and 0 interrupted iterations
+default ✓ [======================================] 1 VUs  30s
+
+     data_received..................: 6.0 GB 201 MB/s
+     data_sent......................: 6.2 MB 207 kB/s
+     http_req_blocked...............: avg=466ns    min=0s      med=0s      max=492µs    p(90)=1µs     p(95)=1µs    
+     http_req_connecting............: avg=3ns      min=0s      med=0s      max=242µs    p(90)=0s      p(95)=0s     
+     http_req_duration..............: avg=462.99µs min=37µs    med=348µs   max=305.47ms p(90)=1.01ms  p(95)=1.11ms 
+       { expected_response:true }...: avg=462.99µs min=37µs    med=348µs   max=305.47ms p(90)=1.01ms  p(95)=1.11ms 
+     http_req_failed................: 0.00%  ✓ 0           ✗ 62905
+     http_req_receiving.............: avg=289.17µs min=5µs     med=164µs   max=305.24ms p(90)=834µs   p(95)=921µs  
+     http_req_sending...............: avg=2.28µs   min=1µs     med=2µs     max=1.94ms   p(90)=3µs     p(95)=5µs    
+     http_req_tls_handshaking.......: avg=0s       min=0s      med=0s      max=0s       p(90)=0s      p(95)=0s     
+     http_req_waiting...............: avg=171.53µs min=27µs    med=178µs   max=14ms     p(90)=193µs   p(95)=199µs  
+     http_reqs......................: 62905  2096.298987/s
+     iteration_duration.............: avg=10.96ms  min=10.17ms med=10.62ms max=335.32ms p(90)=11.21ms p(95)=11.46ms
+     iterations.....................: 2735   91.143434/s
+     vus............................: 1      min=1         max=1  
+     vus_max........................: 1      min=1         max=1  
+
+joshua@Pressfield transit-lang-cmp % k6 run -u 10 --duration 30s loadTestSmallResponses.js
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: loadTestSmallResponses.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 10 max VUs, 1m0s max duration (incl. graceful stop):
+           * default: 10 looping VUs for 30s (gracefulStop: 30s)
+
+
+running (0m30.0s), 00/10 VUs, 13629 complete and 0 interrupted iterations
+default ✓ [======================================] 10 VUs  30s
+
+     data_received..................: 30 GB  999 MB/s
+     data_sent......................: 31 MB  1.0 MB/s
+     http_req_blocked...............: avg=605ns    min=0s      med=0s      max=1.64ms   p(90)=1µs     p(95)=1µs    
+     http_req_connecting............: avg=16ns     min=0s      med=0s      max=593µs    p(90)=0s      p(95)=0s     
+     http_req_duration..............: avg=940.77µs min=36µs    med=544µs   max=312.36ms p(90)=1.53ms  p(95)=1.88ms 
+       { expected_response:true }...: avg=940.77µs min=36µs    med=544µs   max=312.36ms p(90)=1.53ms  p(95)=1.88ms 
+     http_req_failed................: 0.00%  ✓ 0            ✗ 313467
+     http_req_receiving.............: avg=525.9µs  min=5µs     med=214µs   max=312.12ms p(90)=959µs   p(95)=1.36ms 
+     http_req_sending...............: avg=3.51µs   min=1µs     med=2µs     max=3.87ms   p(90)=4µs     p(95)=6µs    
+     http_req_tls_handshaking.......: avg=0s       min=0s      med=0s      max=0s       p(90)=0s      p(95)=0s     
+     http_req_waiting...............: avg=411.35µs min=26µs    med=273µs   max=55.23ms  p(90)=629µs   p(95)=1.08ms 
+     http_reqs......................: 313467 10440.982603/s
+     iteration_duration.............: avg=22.01ms  min=10.32ms med=16.23ms max=733.47ms p(90)=26.25ms p(95)=33.11ms
+     iterations.....................: 13629  453.955765/s
+     vus............................: 10     min=10         max=10  
+     vus_max........................: 10     min=10         max=10  
+
+joshua@Pressfield transit-lang-cmp % k6 run -u 50 --duration 30s loadTestSmallResponses.js
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: loadTestSmallResponses.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 50 max VUs, 1m0s max duration (incl. graceful stop):
+           * default: 50 looping VUs for 30s (gracefulStop: 30s)
+
+
+running (0m30.1s), 00/50 VUs, 17058 complete and 0 interrupted iterations
+default ✓ [======================================] 50 VUs  30s
+
+     data_received..................: 38 GB  1.2 GB/s
+     data_sent......................: 39 MB  1.3 MB/s
+     http_req_blocked...............: avg=944ns    min=0s      med=0s      max=9.65ms   p(90)=1µs      p(95)=1µs     
+     http_req_connecting............: avg=239ns    min=0s      med=0s      max=2.15ms   p(90)=0s       p(95)=0s      
+     http_req_duration..............: avg=3.8ms    min=42µs    med=2.91ms  max=308.48ms p(90)=7.31ms   p(95)=9.67ms  
+       { expected_response:true }...: avg=3.8ms    min=42µs    med=2.91ms  max=308.48ms p(90)=7.31ms   p(95)=9.67ms  
+     http_req_failed................: 0.00%  ✓ 0            ✗ 392334
+     http_req_receiving.............: avg=525.59µs min=5µs     med=242µs   max=305.5ms  p(90)=1.25ms   p(95)=1.79ms  
+     http_req_sending...............: avg=5µs      min=1µs     med=2µs     max=14.26ms  p(90)=4µs      p(95)=6µs     
+     http_req_tls_handshaking.......: avg=0s       min=0s      med=0s      max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=3.27ms   min=31µs    med=2.42ms  max=133.98ms p(90)=6.47ms   p(95)=8.82ms  
+     http_reqs......................: 392334 13050.380715/s
+     iteration_duration.............: avg=88.02ms  min=37.42ms med=79.98ms max=558.84ms p(90)=130.17ms p(95)=146.92ms
+     iterations.....................: 17058  567.407857/s
+     vus............................: 50     min=50         max=50  
+     vus_max........................: 50     min=50         max=50  
+
+joshua@Pressfield transit-lang-cmp % k6 run -u 100 --duration 30s loadTestSmallResponses.js
+
+          /\      |‾‾| /‾‾/   /‾‾/   
+     /\  /  \     |  |/  /   /  /    
+    /  \/    \    |     (   /   ‾‾\  
+   /          \   |  |\  \ |  (‾)  | 
+  / __________ \  |__| \__\ \_____/ .io
+
+  execution: local
+     script: loadTestSmallResponses.js
+     output: -
+
+  scenarios: (100.00%) 1 scenario, 100 max VUs, 1m0s max duration (incl. graceful stop):
+           * default: 100 looping VUs for 30s (gracefulStop: 30s)
+
+
+running (0m30.1s), 000/100 VUs, 17168 complete and 0 interrupted iterations
+default ✓ [======================================] 100 VUs  30s
+
+     data_received..................: 38 GB  1.3 GB/s
+     data_sent......................: 39 MB  1.3 MB/s
+     http_req_blocked...............: avg=1.54µs   min=0s      med=0s       max=7.36ms   p(90)=1µs      p(95)=1µs     
+     http_req_connecting............: avg=798ns    min=0s      med=0s       max=4.15ms   p(90)=0s       p(95)=0s      
+     http_req_duration..............: avg=7.58ms   min=40µs    med=6.15ms   max=424.29ms p(90)=13.41ms  p(95)=16.4ms  
+       { expected_response:true }...: avg=7.58ms   min=40µs    med=6.15ms   max=424.29ms p(90)=13.41ms  p(95)=16.4ms  
+     http_req_failed................: 0.00%  ✓ 0            ✗ 394864
+     http_req_receiving.............: avg=673.33µs min=5µs     med=251µs    max=313.21ms p(90)=1.38ms   p(95)=2.14ms  
+     http_req_sending...............: avg=6.95µs   min=1µs     med=2µs      max=27.06ms  p(90)=4µs      p(95)=7µs     
+     http_req_tls_handshaking.......: avg=0s       min=0s      med=0s       max=0s       p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=6.9ms    min=30µs    med=5.58ms   max=142.75ms p(90)=12.58ms  p(95)=15.5ms  
+     http_reqs......................: 394864 13118.589237/s
+     iteration_duration.............: avg=175.05ms min=80.06ms med=165.01ms max=732.89ms p(90)=224.14ms p(95)=274.11ms
+     iterations.....................: 17168  570.373445/s
+     vus............................: 100    min=100        max=100 
+     vus_max........................: 100    min=100        max=100 
+
+joshua@Pressfield transit-lang-cmp % 
