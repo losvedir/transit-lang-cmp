@@ -7,6 +7,7 @@ and shouldn't be taken _too_ seriously. So far I've built it in C#, Typescript
 Twitter (@losvedir) if you want updates on the project. I hope to eventually get
 to Swift, Kotlin, ordinary Java, Nim, and Zig. And feel free to open an issue if
 you want to suggest another language, or a PR if you want to implement one!
+Please check out [the requirements](/REQUIREMENTS.md) if so.
 
 All the apps read in the MBTA's GTFS data, which is the standard spec for
 transit data - stuff like the routes, stops, and schedules for a system. The
