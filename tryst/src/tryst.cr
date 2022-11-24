@@ -17,8 +17,9 @@ module Tryst
     def self.load_schedules_from_file(path)
       File.open(path) do |file|
         stop_times = CSV.new(file)
-        hash = Hash(String, Array(StopTime)).new do |hash, key|
-          hash[key] = Array(StopTime).new
+        list = Array(StopTime).new
+        hash = Hash(String, Array(Int32)).new do |hash, key|
+          hash[key] = Array(Int32).new
         end
         if !stop_times.next || {"trip_id", "arrival_time", "departure_time", "stop_id"} != stop_times.values_at(0,1,2,3)
           p("stop_times.txt not in expected format")
@@ -27,22 +28,26 @@ module Tryst
         end
         while(stop_times.next)
           stop = StopTime.new(*stop_times.values_at(0,1,2,3))
-          hash[stop.trip_id].push(stop)
+          hash[stop.trip_id] << list.size
+          list << stop
         end
-        hash
+        {list, hash}
       end
     end
   end
 
   class Trip
     getter trip_id : String, route_id : String, service_id : String
+    @stop_times_idx : Hash(String, Array(Int32))
+    @stop_times : Array(StopTime)
 
-    def initialize(stop_times : Hash(String, Array(StopTime)), @trip_id, @route_id, @service_id)
-      @stop_times = stop_times
+    def initialize(@stop_times, @stop_times_idx, @trip_id, @route_id, @service_id)
     end
 
     def schedules
-      @stop_times[trip_id]
+      @stop_times_idx[trip_id].map do |idx|
+        @stop_times[idx]
+      end
     end
 
     def to_json(j : JSON::Builder)
@@ -63,11 +68,12 @@ module Tryst
       end
     end
 
-    def self.load_routes_from_file(path : String, stop_times_by_trip_id : Hash(String, Array(StopTime)))
+    def self.load_routes_from_file(path : String, stop_times : Array(StopTime), stop_times_idx : Hash(String, Array(Int32)))
       File.open(path) do |file|
         trips = CSV.new(file)
-        hash = Hash(String, Array(Trip)).new do |hash, key|
-          hash[key] = Array(Trip).new
+        list = Array(Trip).new
+        hash = Hash(String, Array(Int32)).new do |hash, key|
+          hash[key] = Array(Int32).new
         end
         if !trips.next || {"route_id", "service_id", "trip_id"} != trips.values_at(0,1,2)
           p("trips.txt not in expected format")
@@ -75,26 +81,29 @@ module Tryst
           exit(1)
         end
         while(trips.next)
-          trip = Trip.new(stop_times_by_trip_id, *trips.values_at(2,0,1))
-          hash[trip.route_id].push(trip)
+          trip = Trip.new(stop_times, stop_times_idx, *trips.values_at(2,0,1))
+          hash[trip.route_id] << list.size
+          list << trip
         end
-        hash
+        {list, hash}
       end
     end
   end
 
   start = Time.local
-  stop_times_by_trip_id = StopTime.load_schedules_from_file("../MBTA_GTFS/stop_times.txt")
-  puts "Loaded stop times for #{stop_times_by_trip_id.size} trips in #{Time.local - start}"
+  stop_times, stop_times_idx = StopTime.load_schedules_from_file("../MBTA_GTFS/stop_times.txt")
+  puts "Loaded #{stop_times.size} stop times for #{stop_times_idx.size} trips in #{Time.local - start}"
 
   start = Time.local
-  routes = Trip.load_routes_from_file("../MBTA_GTFS/trips.txt", stop_times_by_trip_id)
-  puts "Loaded trips for #{routes.size} routes in #{Time.local - start}"
+  routes, routes_idx = Trip.load_routes_from_file("../MBTA_GTFS/trips.txt", stop_times, stop_times_idx)
+  puts "Loaded #{routes.size} trips for #{routes_idx.size} routes in #{Time.local - start}"
 
   server = HTTP::Server.new do |context|
     request = context.request
     name = request.path.split('/').last
-    route = routes[name]
+    route = routes_idx[name].map do |idx|
+      routes[idx]
+    end
     response = context.response
     response.content_type = "application/json"
     route.to_json(response.output)
