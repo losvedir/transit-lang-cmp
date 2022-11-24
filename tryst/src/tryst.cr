@@ -35,12 +35,32 @@ module Tryst
   end
 
   class Trip
-    include JSON::Serializable
     getter trip_id : String, route_id : String, service_id : String
-    getter schedules : Array(StopTime)
 
     def initialize(stop_times : Hash(String, Array(StopTime)), @trip_id, @route_id, @service_id)
-      @schedules = stop_times[@trip_id]
+      @stop_times = stop_times
+    end
+
+    def schedules
+      @stop_times[trip_id]
+    end
+
+    def to_json(j : JSON::Builder)
+      j.object do
+        j.field "trip_id", trip_id
+        j.field "route_id", route_id
+        j.field "service_id", service_id
+        j.field "schedules", schedules
+        #  do
+        #   j.array do
+        #     schedules.each do |stop_time|
+        #       j.start_scalar
+        #       stop_time.to_json(io)
+        #       j.end_scalar
+        #     end
+        #   end
+        # end
+      end
     end
 
     def self.load_routes_from_file(path : String, stop_times_by_trip_id : Hash(String, Array(StopTime)))
