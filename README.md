@@ -7,6 +7,7 @@ and shouldn't be taken _too_ seriously. So far I've built it in C#, Typescript
 Twitter (@losvedir) if you want updates on the project. I hope to eventually get
 to Swift, Kotlin, ordinary Java, Nim, and Zig. And feel free to open an issue if
 you want to suggest another language, or a PR if you want to implement one!
+Please check out [the requirements](/REQUIREMENTS.md) if so.
 
 All the apps read in the MBTA's GTFS data, which is the standard spec for
 transit data - stuff like the routes, stops, and schedules for a system. The
@@ -46,6 +47,25 @@ load the GTFS `stop_times.txt` file into an in-memory structure (together with a
 hashmap "index" to access it more efficiently). The second is the requests per
 second that the webservers can field, as measured using the k6 tool.
 
+I'm running this on my personal laptop, from Apple -> About this Mac:
+
+```
+MacBook Pro (14-inch, 2021)
+Chip: Apple M1 Pro
+Memory: 32 GB
+
+MacOS: Ventura 13.0
+```
+
+The process (such as it is) for benchmarking:
+
+- Close all apps other than Terminal and Activity Monitor
+- Use ActivityMonitor to close unnecessary background processes (Chrome updater,
+  etc)
+- Wait to see >99% "Idle"
+- Start the app server (instructions in each app's README)
+- Run all the tests
+
 ### Loading stop_times.txt
 
 This is the time it takes for the app to load the stop_times.txt file, which is
@@ -55,12 +75,12 @@ from the trip ID to a list of indices into the big stop time list.
 
 | Language | Time (ms) |
 | -------- | --------- |
-| C#       | 1,390     |
-| Deno     | 2,905     |
-| Elixir   | 5,986     |
-| Go       | 842       |
-| Rust     | 565       |
-| Scala    | 931       |
+| C#       | 732       |
+| Deno     | 3,033     |
+| Elixir   | 3,270     |
+| Go       | 848       |
+| Rust     | 467       |
+| Scala    | 858       |
 | SQLite   | ~ 4,000   |
 
 ### Webserver performance
@@ -93,12 +113,12 @@ All these were with 50 concurrent virtual users.
 
 | Language | Requests/sec | Max CPU (%) | Max RAM (MB) |
 | -------- | ------------ | ----------- | ------------ |
-| C#       | 1,534        | 654         | 1,750        |
-| Deno     | 286          | 280         | 400          |
-| Elixir   | 388          | 750         | 3,700        |
-| Go       | 2,715        | 620         | 1,100        |
-| Rust     | 2,839        | 619         | 603          |
-| Scala    | 432          | 715         | 3,150        |
+| C#       | 1,543        | 638         | 1,600        |
+| Deno     | 286          | 285         | 480          |
+| Elixir   | 396          | 751         | 1,200        |
+| Go       | 2,663        | 606         | 1,100        |
+| Rust     | 2,289        | 640         | 564          |
+| Scala    | 471          | 710         | 3,600        |
 
 #### Smaller responses
 
@@ -113,24 +133,24 @@ better).
 
 | Language | 1 VU  | 10 VU  | 50 VU  | 100 VU |
 | -------- | ----- | ------ | ------ | ------ |
-| C#       | 2,227 | 11,663 | 13,005 | 13,102 |
-| Deno     | 2,808 | 3,882  | 3,852  | 3,753  |
-| Elixir   | 623   | 3,306  | 3,809  | 3,852  |
-| Go       | 2,283 | 10,551 | 11,078 | 11,091 |
-| Rust     | 3,501 | 20,496 | 22,437 | 22,283 |
-| Scala    | 705   | 4,204  | 4,289  | 4,332  |
+| C#       | 2,280 | 11,796 | 13,261 | 13,095 |
+| Deno     | 2,396 | 3,525  | 3,602  | 3,624  |
+| Elixir   | 624   | 3,153  | 3,814  | 4,045  |
+| Go       | 2,269 | 10,367 | 10,855 | 10,945 |
+| Rust     | 2,924 | 17,474 | 18,934 | 18,764 |
+| Scala    | 780   | 4,564  | 4,712  | 4,734  |
 
 Response times in milliseconds: median / p95 / max, by language and concurrent
 virtual user count (lower is better):
 
-| Language | 1 VU        | 10 VU       | 50 VU         | 100 VU         |
-| -------- | ----------- | ----------- | ------------- | -------------- |
-| C#       | .3 / 1 / 88 | .6 / 2 / 27 | 2 / 12 / 138  | 6 / 17 / 75    |
-| Deno     | .3 / .8 / 5 | 2 / 4 / 254 | 13 / 16 / 218 | 26 / 33 / 265  |
-| Elixir   | 1 / 4 / 11  | 2 / 7 / 22  | 13 / 23 / 58  | 24 / 47 / 132  |
-| Go       | .3 / 1 / 19 | .6 / 2 / 36 | 3 / 15 / 111  | 6 / 29 / 140   |
-| Rust     | .2 / .6 / 3 | .4 / 1 / 9  | 2 / 4 / 36    | 4 / 9 / 85     |
-| Scala    | 1 / 3 / 109 | 2 / 5 / 129 | 3 / 58 / 394  | 10 / 109 / 587 |
+| Language | 1 VU         | 10 VU       | 50 VU         | 100 VU        |
+| -------- | ------------ | ----------- | ------------- | ------------- |
+| C#       | .3 / 1 / 13  | .6 / 2 / 28 | 3 / 10 / 118  | 6 / 20 / 143  |
+| Deno     | .3 / 1 / 199 | 3 / 4 / 204 | 14 / 18 / 217 | 27 / 35 / 236 |
+| Elixir   | 1 / 4 / 7    | 3 / 8 / 19  | 12 / 24 / 65  | 22 / 47 / 140 |
+| Go       | .3 / 1 / 13  | .6 / 3 / 43 | 3 / 16 / 79   | 6 / 29 / 129  |
+| Rust     | .2 / .7 / 2  | .4 / 1 / 11 | 2 / 5 / 31    | 5 / 10 / 45   |
+| Scala    | 1 / 3 / 6    | 2 / 5 / 125 | 4 / 58 / 395  | 11 / 86 / 583 |
 
 ### Searching the data
 
@@ -251,13 +271,18 @@ In that scenario, I've had issues before with how to handle locking and atomic
 updates to ETS data. Most likely it would be something like create a whole new
 ETS table in the background and then swap it out for this one after it's ready.
 
-I used Phoenix here since that's pretty much the standard in Elixir, though it
-might be a bit heavier weight than the other apps. But my understanding is that
-it's mostly just plugs that get compiled in, so it's pretty lightweight in how
-much it actually affects performance vs the minimal possible thing I could do.
+Initially I used Phoenix here, since in my experience it's the go-to way to
+quickly spin up a web app in Elixir-land, but Jose Valim (!!!) issued a PR to
+switch to a simple Plug, to make the code more comparable to the other
+languages, for someone perusing what a simple implementation in each might look
+like. The actual benchmarks were roughly comparable, with only a very slight
+edge to Plug in one of the benchmarks, which impressed me with how lightweight
+Phoenix is for all you get!
 
 The final performance results were unfortunately low, an order of magnitude
-worse than Rust, and a little behind Deno.
+worse than Rust, but faster than Deno. On the other hand the ratio of median
+response time to max response time was lowest with Elixir than any other
+language, which can have its own benefits.
 
 ### Go
 

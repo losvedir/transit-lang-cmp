@@ -32,26 +32,30 @@ defmodule Trexit.GTFS.Loader do
         get_stop_times()
       end)
 
-    Logger.info("Parsed stop_times.txt in #{time / 1000} ms")
+    IO.puts("Parsed stop_times.txt in #{time / 1000} ms")
 
     {time, _} =
       :timer.tc(fn ->
         get_trips()
       end)
 
-    Logger.info("Parsed trips.txt in #{time / 1000} ms")
+    IO.puts("Parsed trips.txt in #{time / 1000} ms")
   end
 
   defp get_stop_times() do
-    [header | rest] =
-      "../MBTA_GTFS/stop_times.txt"
-      |> File.read!()
-      |> NimbleCSV.RFC4180.parse_string(skip_headers: false)
-
     # assert column order
-    ["trip_id", "arrival_time", "departure_time", "stop_id" | _] = header
+    [["trip_id", "arrival_time", "departure_time", "stop_id" | _]] =
+      "../MBTA_GTFS/stop_times.txt"
+      |> File.stream!()
+      |> NimbleCSV.RFC4180.parse_stream(skip_headers: false)
+      |> Stream.take(1)
+      |> Enum.to_list()
 
-    Enum.with_index(rest, fn [trip_id, arrival_time, departure_time, stop_id | _], i ->
+    "../MBTA_GTFS/stop_times.txt"
+    |> File.stream!()
+    |> NimbleCSV.RFC4180.parse_stream(skip_headers: true)
+    |> Stream.with_index()
+    |> Stream.each(fn {[trip_id, arrival_time, departure_time, stop_id | _], i} ->
       case :ets.lookup(:stop_times_ix_by_trip, trip_id) do
         [] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [i]})
         [{_, sts}] -> :ets.insert(:stop_times_ix_by_trip, {trip_id, [i | sts]})
@@ -68,18 +72,23 @@ defmodule Trexit.GTFS.Loader do
          }}
       )
     end)
+    |> Stream.run()
   end
 
   defp get_trips() do
-    [header | rest] =
-      "../MBTA_GTFS/trips.txt"
-      |> File.read!()
-      |> NimbleCSV.RFC4180.parse_string(skip_headers: false)
-
     # assert column order
-    ["route_id", "service_id", "trip_id" | _] = header
+    [["route_id", "service_id", "trip_id" | _]] =
+      "../MBTA_GTFS/trips.txt"
+      |> File.stream!()
+      |> NimbleCSV.RFC4180.parse_stream(skip_headers: false)
+      |> Stream.take(1)
+      |> Enum.to_list()
 
-    Enum.with_index(rest, fn [route_id, service_id, trip_id | _], i ->
+    "../MBTA_GTFS/trips.txt"
+    |> File.stream!()
+    |> NimbleCSV.RFC4180.parse_stream(skip_headers: true)
+    |> Stream.with_index()
+    |> Stream.each(fn {[route_id, service_id, trip_id | _], i} ->
       case :ets.lookup(:trips_ix_by_route, route_id) do
         [] -> :ets.insert(:trips_ix_by_route, {route_id, [i]})
         [{_, trips}] -> :ets.insert(:trips_ix_by_route, {route_id, [i | trips]})
@@ -95,5 +104,6 @@ defmodule Trexit.GTFS.Loader do
          }}
       )
     end)
+    |> Stream.run()
   end
 end

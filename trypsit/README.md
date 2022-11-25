@@ -12,5 +12,5 @@ typescript 4.8.3
 Run via:
 
 ```
-> deno run --lock=lock.json -A app.ts Red
+> deno run --lock=lock.json -A app.ts
 ```

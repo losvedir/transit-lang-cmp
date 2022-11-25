@@ -9,5 +9,5 @@ To run:
 
 ```
 > go build app.go
-> ./app Red
+> ./app
 ```
