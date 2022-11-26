@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -12,172 +14,154 @@ import (
 )
 
 type StopTime struct {
-	TripID    string
-	StopID    string
-	Arrival   string
-	Departure string
-}
-
-type Trip struct {
-	TripID    string
-	RouteID   string
-	ServiceID string
-}
-
-type TripResponse struct {
-	TripID    string             `json:"trip_id"`
-	ServiceID string             `json:"service_id"`
-	RouteID   string             `json:"route_id"`
-	Schedules []ScheduleResponse `json:"schedules"`
-}
-
-type ScheduleResponse struct {
+	TripID    string `json:"-"`
 	StopID    string `json:"stop_id"`
 	Arrival   string `json:"arrival_time"`
 	Departure string `json:"departure_time"`
 }
 
-func buildTripResponse(
-	route string,
-	stopTimes []StopTime,
-	stopTimesIxByTrip map[string][]int,
-	trips []Trip,
-	tripsIxByRoute map[string][]int,
-) []TripResponse {
-	tripIxs, ok := tripsIxByRoute[route]
+type Trip struct {
+	TripID    string `json:"trip_id"`
+	ServiceID string `json:"service_id"`
+	RouteID   string `json:"route_id"`
+}
 
-	if ok {
-		resp := make([]TripResponse, 0, len(tripIxs))
-		for tripIx := range tripIxs {
-			trip := trips[tripIx]
-			tripResponse := TripResponse{
-				TripID:    trip.TripID,
-				ServiceID: trip.ServiceID,
-				RouteID:   trip.RouteID,
-			}
+type TripResponse struct {
+	*Trip
+	Stops []*StopTime `json:"schedules"`
+}
 
-			stopTimeIxs, ok := stopTimesIxByTrip[trip.TripID]
-			if ok {
-				tripResponse.Schedules = make([]ScheduleResponse, 0, len(stopTimeIxs))
-				for stopTimeIx := range stopTimeIxs {
-					stopTime := stopTimes[stopTimeIx]
-					tripResponse.Schedules = append(tripResponse.Schedules, ScheduleResponse{
-						StopID:    stopTime.StopID,
-						Arrival:   stopTime.Arrival,
-						Departure: stopTime.Departure,
-					})
-				}
-			} else {
-				tripResponse.Schedules = []ScheduleResponse{}
-			}
-			resp = append(resp, tripResponse)
+func buildTripResponse(trips []*Trip, stopTimesByTrip map[string][]*StopTime) []TripResponse {
+	resp := make([]TripResponse, 0, len(trips))
+
+	for _, trip := range trips {
+		tripResp := TripResponse{
+			Trip:  trip,
+			Stops: stopTimesByTrip[trip.TripID],
 		}
-		return resp
-	} else {
-		return []TripResponse{}
+
+		resp = append(resp, tripResp)
 	}
+
+	return resp
 }
 
 func main() {
-	stopTimes, stopTimesIxByTrip := getStopTimes()
-	trips, tripsIxByRoute := getTrips()
+	_, stopTimesByTrip := getStopTimes()
+	_, tripsByRoute := getTrips()
 
 	http.HandleFunc("/schedules/", func(w http.ResponseWriter, r *http.Request) {
 		route := strings.Split(r.URL.Path, "/")[2]
-		resp := buildTripResponse(route, stopTimes, stopTimesIxByTrip, trips, tripsIxByRoute)
+		resp := buildTripResponse(tripsByRoute[route], stopTimesByTrip)
 		w.Header().Set("Content-Type", "application/json")
-		json_resp, err := json.Marshal(resp)
-		if err != nil {
+
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			fmt.Println("json error", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("500 - Something bad happened!"))
-		} else {
-			w.Write(json_resp)
 		}
 	})
 	log.Fatal(http.ListenAndServe(":4000", nil))
 }
 
-func getStopTimes() ([]StopTime, map[string][]int) {
-	f, err := os.Open("../MBTA_GTFS/stop_times.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
+func getStopTimes() ([]*StopTime, map[string][]*StopTime) {
+	filename := "../MBTA_GTFS/stop_times.txt"
+	headers := []string{"trip_id", "arrival_time", "departure_time", "stop_id"}
 	start := time.Now()
-	r := csv.NewReader(f)
-	records, err := r.ReadAll()
+
+	stopTimes := make([]*StopTime, 0)
+	stsByTrip := make(map[string][]*StopTime)
+
+	err := parseCsvFile(filename, headers, func(records []string, i int) {
+		stop := &StopTime{
+			TripID:    records[0],
+			StopID:    records[3],
+			Arrival:   records[1],
+			Departure: records[2],
+		}
+
+		stsByTrip[stop.TripID] = append(stsByTrip[stop.TripID], stop)
+		stopTimes = append(stopTimes, stop)
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	if records[0][0] != "trip_id" || records[0][3] != "stop_id" || records[0][1] != "arrival_time" || records[0][2] != "departure_time" {
-		fmt.Println("stop_times.txt not in expected format:")
-		for i, cell := range records[0] {
-			fmt.Println(i, cell)
-		}
-		panic(1)
-	}
-
-	stopTimes := make([]StopTime, 0, 1_000_000)
-	stsByTrip := make(map[string][]int)
-	for i, rec := range records[1:] {
-		trip := rec[0]
-		sts, ok := stsByTrip[trip]
-		if ok {
-			stsByTrip[trip] = append(sts, i)
-		} else {
-			stsByTrip[trip] = []int{i}
-		}
-		stopTimes = append(stopTimes, StopTime{TripID: trip, StopID: rec[3], Arrival: rec[1], Departure: rec[2]})
-	}
-	end := time.Now()
-	elapsed := end.Sub(start)
-
+	elapsed := time.Since(start)
 	fmt.Println("parsed", len(stopTimes), "stop times in", elapsed)
 
 	return stopTimes, stsByTrip
 }
 
-func getTrips() ([]Trip, map[string][]int) {
-	f, err := os.Open("../MBTA_GTFS/trips.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
+func getTrips() ([]*Trip, map[string][]*Trip) {
+	filename := "../MBTA_GTFS/trips.txt"
+	headers := []string{"route_id", "service_id", "trip_id"}
 	start := time.Now()
-	r := csv.NewReader(f)
-	records, err := r.ReadAll()
+
+	trips := make([]*Trip, 0)
+	tripsByRoute := make(map[string][]*Trip)
+
+	err := parseCsvFile(filename, headers, func(records []string, i int) {
+		trip := &Trip{
+			TripID:    records[2],
+			RouteID:   records[0],
+			ServiceID: records[1],
+		}
+
+		tripsByRoute[trip.RouteID] = append(tripsByRoute[trip.RouteID], trip)
+		trips = append(trips, trip)
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	if records[0][2] != "trip_id" || records[0][0] != "route_id" || records[0][1] != "service_id" {
-		fmt.Println("trips.txt not in expected format:")
-		for i, cell := range records[0] {
-			fmt.Println(i, cell)
-		}
-		panic(1)
-	}
-
-	trips := make([]Trip, 0, 70_000)
-	tripsByRoute := make(map[string][]int)
-	for i, rec := range records[1:] {
-		route := rec[0]
-		ts, ok := tripsByRoute[route]
-		if ok {
-			tripsByRoute[route] = append(ts, i)
-		} else {
-			tripsByRoute[route] = []int{i}
-		}
-		trips = append(trips, Trip{TripID: rec[2], RouteID: route, ServiceID: rec[1]})
-	}
-	end := time.Now()
-	elapsed := end.Sub(start)
-
+	elapsed := time.Since(start)
 	fmt.Println("parsed", len(trips), "trips in", elapsed)
 
 	return trips, tripsByRoute
+}
+
+func parseCsvFile(filename string, headers []string, parseRec func([]string, int)) error {
+	f, rd, err := openCsv(filename, headers)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	i, records := 0, []string(nil)
+	for records, err = rd.Read(); err == nil; records, err = rd.Read() {
+		parseRec(records, i)
+		i++
+	}
+
+	if err == io.EOF {
+		err = nil
+	}
+
+	return err
+}
+
+func openCsv(filename string, headers []string) (*os.File, *csv.Reader, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rd := csv.NewReader(bufio.NewReader(f))
+	rd.ReuseRecord = true
+
+	records, err := rd.Read()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(records) < len(headers) {
+		return nil, nil, fmt.Errorf("more headers provided than in file %#v", records)
+	}
+
+	for i := 0; i < len(headers); i++ {
+		if records[i] != headers[i] {
+			return nil, nil, fmt.Errorf("%v not in expected format, file headers: %#v", filename, records)
+		}
+	}
+
+	return f, rd, nil
 }
