@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Collections;
 using Trannet.Services;
 
 namespace Trannet.Controllers;
@@ -15,7 +16,7 @@ public class SchedulesController : ControllerBase
   }
 
   [HttpGet("{routeId}")]
-  public List<TripResponse> Get(string routeId)
+  public IEnumerable<TripResponse> Get(string routeId)
   {
     return GTFSService.SchedulesForRoute(routeId);
   }
