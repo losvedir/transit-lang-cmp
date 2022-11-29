@@ -8,3 +8,8 @@ trexit/_build
 trexit/deps
 trogsit/app
 trustit/target
+/trascal/app
+/trascal/alt
+*.o
+*.ppu
+*.rsj
