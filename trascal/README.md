@@ -3,7 +3,7 @@
 There are 2 implementations provided:
 
 * app.pas: The "innocent" version, more or less a direct translation from the Go version, using preshipped libraries as much as possible, with the exception of LGenerics and custom CSV loader as the "built-in" csvdocument unit is not coded with performance in mind, but more for usability
-* alt.pas: The "NOS" version, performance focused one, very well optimized for x86_64 (will need extra effort to compile for aarch64-macos, as its static library only has aarch64-linux and aarch64-android as of now), thanks to Arnaud Bouchez, Founder of the Open Source *mORMot* (2) Framework. The same program can be found from https://github.com/synopse/mORMot2/tree/master/ex/lang-cmp
+* alt.pas: The "NOS" version, performance focused one, very well optimized for x86_64 (will need extra effort to compile for aarch64-macos, as its static library only has aarch64-linux and aarch64-android as of now), thanks to Arnaud Bouchez, Founder of the Open Source *mORMot* (2) Framework. The same program can be found from https://github.com/synopse/mORMot2/tree/master/ex/lang-cmp and there's also [a relevant blog post](https://blog.synopse.info/?post/2022/11/26/Modern-Pascal-is-Still-in-the-Race)
 
 On my system, which is a ROG GL503VD with the following specs:
 
@@ -97,3 +97,23 @@ default ✓ [======================================] 50 VUs  30s
      vus_max........................: 50     min=50      max=50
 ```
 
+# How to build
+
+A Makefile is provided to ease building. All external dependencies are included in the repo, so all you need to have installed is just:
+
+* GNU Make
+* Free Pascal Compiler, I use their main branch, but 3.2.2 should be able to build it as well
+
+by default
+
+`$ make`
+
+will compile both app.pas and alt.pas, but you can specify any if you wish:
+
+`$ make app`
+
+`$ make alt`
+
+as well as cleaning everything to its fresh state:
+
+`$ make clean`
