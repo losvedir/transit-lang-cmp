@@ -75,32 +75,37 @@ async fn schedule_handler(
     let resp: Vec<TripResponse> = data
         .trips_ix_by_route
         .get(&route_id)
-        .unwrap_or(&Vec::new())
-        .iter()
-        .map(|trip_ix| {
-            let trip = &data.trips[*trip_ix];
-            let schedules: Vec<ScheduleResponse> = data
-                .stop_times_ix_by_trip
-                .get(&trip.trip_id)
-                .unwrap_or(&Vec::new())
+        .map(|trips| {
+            trips
                 .iter()
-                .map(|stop_time_ix| {
-                    let stop_time = &data.stop_times[*stop_time_ix];
-                    ScheduleResponse {
-                        stop_id: &stop_time.stop_id,
-                        arrival_time: &stop_time.arrival,
-                        departure_time: &stop_time.departure,
+                .map(|trip_ix| {
+                    let trip = &data.trips[*trip_ix];
+                    let schedules: Vec<ScheduleResponse> = data
+                        .stop_times_ix_by_trip
+                        .get(&trip.trip_id)
+                        .map(|trip| {
+                            trip.iter()
+                                .map(|stop_time_ix| {
+                                    let stop_time = &data.stop_times[*stop_time_ix];
+                                    ScheduleResponse {
+                                        stop_id: &stop_time.stop_id,
+                                        arrival_time: &stop_time.arrival,
+                                        departure_time: &stop_time.departure,
+                                    }
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    TripResponse {
+                        trip_id: &trip.trip_id,
+                        service_id: &trip.service_id,
+                        route_id: &trip.route_id,
+                        schedules: schedules,
                     }
                 })
-                .collect();
-            TripResponse {
-                trip_id: &trip.trip_id,
-                service_id: &trip.service_id,
-                route_id: &trip.route_id,
-                schedules: schedules,
-            }
+                .collect::<Vec<_>>()
         })
-        .collect();
+        .unwrap_or_default();
     Json(resp).into_response()
 }
 
