@@ -50,7 +50,7 @@ struct Data {
 #[tokio::main]
 async fn main() {
     let (stop_times, stop_times_ix_by_trip) = get_stop_times();
-    let (trips, trips_ix_by_route) = get_trips();
+    let (trips, trips_ix_by_route) = get_trips(stop_times_ix_by_trip.len());
     let data = Data {
         trips: trips,
         trips_ix_by_route: trips_ix_by_route,
@@ -129,17 +129,15 @@ fn get_stop_times() -> (Vec<StopTime>, HashMap<String, Vec<usize>>) {
         }
     }
 
-    let mut stop_time_by_trip: HashMap<String, Vec<usize>> = HashMap::new();
-    let mut ix: usize = 0;
-
     let mut stop_times: Vec<StopTime> = Vec::with_capacity(2_000_000);
-    for result in rdr_iter {
+    let mut stop_time_by_trip: HashMap<String, Vec<usize>> = HashMap::with_capacity(80_000);
+    for (ix, result) in rdr_iter.enumerate() {
         let record = result.expect("CSV record");
         let trip_id: String = record.get(0).expect("row trip").into();
 
         let trips = stop_time_by_trip
             .entry(trip_id.clone())
-            .or_insert(Vec::new());
+            .or_insert_with(Vec::new);
         trips.push(ix);
 
         stop_times.push(StopTime {
@@ -148,20 +146,23 @@ fn get_stop_times() -> (Vec<StopTime>, HashMap<String, Vec<usize>>) {
             arrival: record.get(1).expect("row arrival").into(),
             departure: record.get(2).expect("row departure").into(),
         });
-        ix = ix + 1;
     }
+
+    stop_times.shrink_to_fit();
+    stop_time_by_trip.shrink_to_fit();
 
     let elapsed = now.elapsed();
     println!(
-        "parsed {:?} stop_times in {:?} ms",
+        "parsed {:?} stop_times (for {} trips) in {:?} ms",
         stop_times.len(),
+        stop_time_by_trip.len(),
         elapsed.as_millis()
     );
 
     return (stop_times, stop_time_by_trip);
 }
 
-fn get_trips() -> (Vec<Trip>, HashMap<String, Vec<usize>>) {
+fn get_trips(trip_count: usize) -> (Vec<Trip>, HashMap<String, Vec<usize>>) {
     let now = Instant::now();
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(false)
@@ -185,27 +186,29 @@ fn get_trips() -> (Vec<Trip>, HashMap<String, Vec<usize>>) {
         }
     }
 
-    let mut trips: Vec<Trip> = Vec::with_capacity(2_000_000);
-    let mut trip_by_route: HashMap<String, Vec<usize>> = HashMap::new();
-
-    let mut ix: usize = 0;
-    for result in rdr_iter {
+    let mut trips: Vec<Trip> = Vec::with_capacity(trip_count);
+    let mut trip_by_route: HashMap<String, Vec<usize>> = HashMap::with_capacity(200);
+    for (ix, result) in rdr_iter.enumerate() {
         let record = result.expect("CSV record");
         let route_id: String = record.get(0).expect("row route").into();
-        let e = trip_by_route.entry(route_id.clone()).or_insert(Vec::new());
+        let e = trip_by_route
+            .entry(route_id.clone())
+            .or_insert_with(Vec::new);
         e.push(ix);
         trips.push(Trip {
             route_id: route_id,
             service_id: record.get(1).expect("row service").into(),
             trip_id: record.get(2).expect("row trip_id").into(),
         });
-        ix += 1;
     }
+
+    trip_by_route.shrink_to_fit();
 
     let elapsed = now.elapsed();
     println!(
-        "parsed {:?} trips in {:?} ms",
+        "parsed {:?} trips (for {} routes) in {:?} ms",
         trips.len(),
+        trip_by_route.len(),
         elapsed.as_millis()
     );
 
