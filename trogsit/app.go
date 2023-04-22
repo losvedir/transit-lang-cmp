@@ -44,38 +44,30 @@ func buildTripResponse(
 	trips []Trip,
 	tripsIxByRoute map[string][]int,
 ) []TripResponse {
-	tripIxs, ok := tripsIxByRoute[route]
+	tripIxs := tripsIxByRoute[route]
+	resp := make([]TripResponse, 0, len(tripIxs))
+	for tripIx := range tripIxs {
+		trip := trips[tripIx]
 
-	if ok {
-		resp := make([]TripResponse, 0, len(tripIxs))
-		for tripIx := range tripIxs {
-			trip := trips[tripIx]
-			tripResponse := TripResponse{
-				TripID:    trip.TripID,
-				ServiceID: trip.ServiceID,
-				RouteID:   trip.RouteID,
-			}
-
-			stopTimeIxs, ok := stopTimesIxByTrip[trip.TripID]
-			if ok {
-				tripResponse.Schedules = make([]ScheduleResponse, 0, len(stopTimeIxs))
-				for stopTimeIx := range stopTimeIxs {
-					stopTime := stopTimes[stopTimeIx]
-					tripResponse.Schedules = append(tripResponse.Schedules, ScheduleResponse{
-						StopID:    stopTime.StopID,
-						Arrival:   stopTime.Arrival,
-						Departure: stopTime.Departure,
-					})
-				}
-			} else {
-				tripResponse.Schedules = []ScheduleResponse{}
-			}
-			resp = append(resp, tripResponse)
+		stopTimeIxs := stopTimesIxByTrip[trip.TripID]
+		schedules := make([]ScheduleResponse, 0, len(stopTimeIxs))
+		for stopTimeIx := range stopTimeIxs {
+			stopTime := stopTimes[stopTimeIx]
+			schedules = append(schedules, ScheduleResponse{
+				StopID:    stopTime.StopID,
+				Arrival:   stopTime.Arrival,
+				Departure: stopTime.Departure,
+			})
 		}
-		return resp
-	} else {
-		return []TripResponse{}
+
+		resp = append(resp, TripResponse{
+			TripID:    trip.TripID,
+			ServiceID: trip.ServiceID,
+			RouteID:   trip.RouteID,
+			Schedules: schedules,
+		})
 	}
+	return resp
 }
 
 func main() {
@@ -124,12 +116,7 @@ func getStopTimes() ([]StopTime, map[string][]int) {
 	stsByTrip := make(map[string][]int)
 	for i, rec := range records[1:] {
 		trip := rec[0]
-		sts, ok := stsByTrip[trip]
-		if ok {
-			stsByTrip[trip] = append(sts, i)
-		} else {
-			stsByTrip[trip] = []int{i}
-		}
+		stsByTrip[trip] = append(stsByTrip[trip], i)
 		stopTimes = append(stopTimes, StopTime{TripID: trip, StopID: rec[3], Arrival: rec[1], Departure: rec[2]})
 	}
 	end := time.Now()
@@ -166,12 +153,7 @@ func getTrips() ([]Trip, map[string][]int) {
 	tripsByRoute := make(map[string][]int)
 	for i, rec := range records[1:] {
 		route := rec[0]
-		ts, ok := tripsByRoute[route]
-		if ok {
-			tripsByRoute[route] = append(ts, i)
-		} else {
-			tripsByRoute[route] = []int{i}
-		}
+		tripsByRoute[route] = append(tripsByRoute[route], i)
 		trips = append(trips, Trip{TripID: rec[2], RouteID: route, ServiceID: rec[1]})
 	}
 	end := time.Now()
