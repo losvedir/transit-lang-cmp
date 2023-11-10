@@ -79,6 +79,7 @@ from the trip ID to a list of indices into the big stop time list.
 | Deno     | 3,033     |
 | Elixir   | 3,270     |
 | Go       | 848       |
+| Java     | 1,040     |
 | Rust     | 467       |
 | Scala    | 858       |
 | SQLite   | ~ 4,000   |
@@ -117,6 +118,7 @@ All these were with 50 concurrent virtual users.
 | Deno     | 286          | 285         | 480          |
 | Elixir   | 396          | 751         | 1,200        |
 | Go       | 2,663        | 606         | 1,100        |
+| Java     | 1,134        | 490         | 2,300        |
 | Rust     | 2,289        | 640         | 564          |
 | Scala    | 471          | 710         | 3,600        |
 
@@ -137,6 +139,7 @@ better).
 | Deno     | 2,396 | 3,525  | 3,602  | 3,624  |
 | Elixir   | 624   | 3,153  | 3,814  | 4,045  |
 | Go       | 2,269 | 10,367 | 10,855 | 10,945 |
+| Java     | 2,018 | 8,627  | 10,161 | 10,660 |
 | Rust     | 2,924 | 17,474 | 18,934 | 18,764 |
 | Scala    | 780   | 4,564  | 4,712  | 4,734  |
 
@@ -149,6 +152,7 @@ virtual user count (lower is better):
 | Deno     | .3 / 1 / 199 | 3 / 4 / 204 | 14 / 18 / 217 | 27 / 35 / 236 |
 | Elixir   | 1 / 4 / 7    | 3 / 8 / 19  | 12 / 24 / 65  | 22 / 47 / 140 |
 | Go       | .3 / 1 / 13  | .6 / 3 / 43 | 3 / 16 / 79   | 6 / 29 / 129  |
+| Java     | .4 / 1 / 3   | 1 / 2 / 133 | 4 / 9 / 296   | 8 / 19 / 528  |
 | Rust     | .2 / .7 / 2  | .4 / 1 / 11 | 2 / 5 / 31    | 5 / 10 / 45   |
 | Scala    | 1 / 3 / 6    | 2 / 5 / 125 | 4 / 58 / 395  | 11 / 86 / 583 |
 
@@ -325,6 +329,45 @@ this works, but it seemed like there was a reasonable consensus that using
 simply the standard library was a good place to start. That was nice, and helped
 me avoid the analysis paralysis and reviewing benchmarks and HN and reddit, etc,
 to decide _which_ framework to use.
+
+### Java
+
+This was the first time I'd written Java in 15 years and I was happy with how it
+has changed. The new `record` construct, in particular, spoke to me, since I
+tend to think of programs as working on simple typed data structures. It's
+similar to Elixir's `defstruct` or how Rust structs work. That, plus some
+quality of life improvements like `var` and `<>` (apparently known as "the
+diamond operator" according to ChatGPT), made it much less tedious and verbose
+than I remembered. I also appreciated seeing lambdas, though in the end I think
+I didn't use one.
+
+I used VSCode for this project, and the code intelligence was great! At one
+point, I renamed a file, and it asked if I wanted it to rename associated files,
+packages, and class names to match. It was great. I understand this is still
+pretty meager in comparison to something like IntelliJ, so if I use Java more
+I'll have to invest in learning that new tool. The wheel of time turns and ages
+come and pass... I moved to vim and then VSCode after a bad experience with
+Eclipse back in the day. Ah well.
+
+I was a bit confused and overwhelmed by the looping constructs. Should I just
+use a naked `for` loop with an index? `for elem : collection`? `forEach` with a
+lambda? This new Streams interface?
+
+I'm not sure about the package manager / ecosystem yet. I know Java has a killer
+ecosystem, but I didn't get a feel for how it works. I love ruby-bundler lineage
+approach (rust's Cargo, Elixir's hex, discretely leaving out npm here), with a
+package file and lock. I think Maven does that here? But I'm not sure how it
+works, specifying versions, resolving version constraints, etc.
+
+I wasn't sold on Spring Boot, and Spring Web MVC. It was nicely compact, but
+very magical. There were a lot of annotations which I don't understand how they
+work, and I didn't even really see where, e.g., Tomcat was started up. I was
+actually at quite a loss for a while figuring out how to pass the constructed
+GTFS state from the app start-up to the controller to access. The docs were no
+help, but fortunately ChatGPT got me unblocked (I literally just pasted in the
+demo `TravaApplication` code and asked how to get this state to the controller).
+I'm not sure if the `@PostConstruct` annotation was the right thing to do, but
+it seems to work.
 
 ### Rust
 
