@@ -27,7 +27,7 @@ defmodule Trexit.MixProject do
   defp deps do
     [
       {:jason, "~> 1.2"},
-      {:plug_cowboy, "~> 2.5"},
+      {:bandit, "~> 1.0"},
       {:nimble_csv, "~> 1.2"},
       {:jsonrs, "~> 0.2"}
     ]
