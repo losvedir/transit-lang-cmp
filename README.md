@@ -128,6 +128,13 @@ a lot higher, and less dominated by JSON encoding. Since the responses are
 smaller and more requests can be handled, I also tried it with different number
 of concurrent "virtual users".
 
+```
+> k6 run -u 1 --duration 30s loadTestSmallResponses.js 
+> k6 run -u 10 --duration 30s loadTestSmallResponses.js 
+> k6 run -u 50 --duration 30s loadTestSmallResponses.js 
+> k6 run -u 100 --duration 30s loadTestSmallResponses.js 
+```
+
 Requests per second, by language and concurrent virtual user count (higher is
 better).
 
@@ -135,7 +142,7 @@ better).
 | -------- | ----- | ------ | ------ | ------ |
 | C#       | 2,280 | 11,796 | 13,261 | 13,095 |
 | Deno     | 2,396 | 3,525  | 3,602  | 3,624  |
-| Elixir   | 624   | 3,153  | 3,814  | 4,045  |
+| Elixir   | 679   | 4,217  | 4,578  | 4,599  |
 | Go       | 2,269 | 10,367 | 10,855 | 10,945 |
 | Rust     | 2,924 | 17,474 | 18,934 | 18,764 |
 | Scala    | 780   | 4,564  | 4,712  | 4,734  |
@@ -147,7 +154,7 @@ virtual user count (lower is better):
 | -------- | ------------ | ----------- | ------------- | ------------- |
 | C#       | .3 / 1 / 13  | .6 / 2 / 28 | 3 / 10 / 118  | 6 / 20 / 143  |
 | Deno     | .3 / 1 / 199 | 3 / 4 / 204 | 14 / 18 / 217 | 27 / 35 / 236 |
-| Elixir   | 1 / 4 / 7    | 3 / 8 / 19  | 12 / 24 / 65  | 22 / 47 / 140 |
+| Elixir   | 1 / 3 / 7    | 2 / 5 / 15  | 10 / 19 / 51  | 20 / 38 / 108 |
 | Go       | .3 / 1 / 13  | .6 / 3 / 43 | 3 / 16 / 79   | 6 / 29 / 129  |
 | Rust     | .2 / .7 / 2  | .4 / 1 / 11 | 2 / 5 / 31    | 5 / 10 / 45   |
 | Scala    | 1 / 3 / 6    | 2 / 5 / 125 | 4 / 58 / 395  | 11 / 86 / 583 |
